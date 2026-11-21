@@ -15,7 +15,7 @@ export default defineConfig({
       workbox: {
         // Precache the app shell, every font file and the license notes so the
         // app works fully offline after the first visit.
-        globPatterns: ['**/*.{js,css,html,svg,woff,md}'],
+        globPatterns: ['**/*.{js,css,html,svg,woff,woff2,md}'],
         cleanupOutdatedCaches: true,
       },
     }),
