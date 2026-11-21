@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { parseHex } from '../lib/color';
 import { sanitizeText } from '../lib/sanitize';
-import { isShape, type Shape } from '../lib/shapes';
-import { DEFAULT_FONT_ID, isFontId, type FontId } from '../fonts/registry';
+import { DEFAULT_RADIUS, DEFAULT_SEED, isShape, type Shape } from '../lib/shapes';
+import { DEFAULT_FONT_ID, isFontId, isWeight, type FontId, type Weight } from '../fonts/registry';
 
 export interface Range {
   min: number;
@@ -13,44 +13,81 @@ export interface Range {
 export const LIMITS = {
   size: { min: 64, max: 1024, step: 8 },
   scale: { min: 30, max: 90, step: 1 },
-  spacing: { min: -10, max: 30, step: 1 },
+  spacing: { min: -60, max: 30, step: 1 },
   gradientAngle: { min: 0, max: 360, step: 15 },
+  radius: { min: 0, max: 50, step: 1 },
+  blobSeed: { min: 1, max: 999, step: 1 },
+  stroke: { min: 10, max: 80, step: 5 },
+  shift: { min: -50, max: 50, step: 1 },
+  rotate1: { min: -45, max: 45, step: 1 },
+  rotate2: { min: -45, max: 45, step: 1 },
 } as const satisfies Record<string, Range>;
+
+type NumericKey = keyof typeof LIMITS;
 
 export const FILLS = ['solid', 'gradient'] as const;
 export type Fill = (typeof FILLS)[number];
+
+export const LETTER_STYLES = ['fill', 'outline'] as const;
+export type LetterStyle = (typeof LETTER_STYLES)[number];
 
 export interface LogoState {
   /** Sanitized text in the case the user typed it. */
   text: string;
   uppercase: boolean;
   shape: Shape;
+  /** Rounded-square corner radius, % of the side. */
+  radius: number;
+  blobSeed: number;
+  /** Inner border ring in the letter color. */
+  ring: boolean;
   bgColor: string;
   /** Second gradient stop (used when fill === 'gradient'). */
   bgColor2: string;
   fill: Fill;
-  /** CSS-style angle: 0° = bottom→top, 90° = left→right. */
+  /** CSS-style angle: 0° = bottom→top, 90° = left→right. Shared by both gradients. */
   gradientAngle: number;
   fgColor: string;
+  fgColor2: string;
+  fgFill: Fill;
+  letterStyle: LetterStyle;
+  /** Outline width, ‰ of the canvas. */
+  stroke: number;
   fontId: FontId;
+  weight: Weight;
   size: number;
   scale: number;
   spacing: number;
+  /** Second letter vertical shift, % of the em. */
+  shift: number;
+  rotate1: number;
+  rotate2: number;
 }
 
 export const STATE_KEYS = [
   'text',
   'uppercase',
   'shape',
+  'radius',
+  'blobSeed',
+  'ring',
   'bgColor',
   'bgColor2',
   'fill',
   'gradientAngle',
   'fgColor',
+  'fgColor2',
+  'fgFill',
+  'letterStyle',
+  'stroke',
   'fontId',
+  'weight',
   'size',
   'scale',
   'spacing',
+  'shift',
+  'rotate1',
+  'rotate2',
 ] as const satisfies readonly (keyof LogoState)[];
 
 export type UntrustedState = Partial<Record<keyof LogoState, unknown>>;
@@ -78,15 +115,26 @@ export const DEFAULTS: LogoState = {
   text: 'LM',
   uppercase: true,
   shape: 'circle',
+  radius: DEFAULT_RADIUS,
+  blobSeed: DEFAULT_SEED,
+  ring: false,
   bgColor: '#111111',
   bgColor2: '#047857',
   fill: 'solid',
   gradientAngle: 135,
   fgColor: '#ffffff',
+  fgColor2: '#a7f3d0',
+  fgFill: 'solid',
+  letterStyle: 'fill',
+  stroke: 30,
   fontId: DEFAULT_FONT_ID,
+  weight: 700,
   size: 512,
   scale: 55,
   spacing: 0,
+  shift: 0,
+  rotate1: 0,
+  rotate2: 0,
 };
 
 /** Clamp to [min, max] and snap to the step grid. Returns null for non-finite input. */
@@ -101,6 +149,10 @@ export function isFill(value: unknown): value is Fill {
   return typeof value === 'string' && (FILLS as readonly string[]).includes(value);
 }
 
+function isLetterStyle(value: unknown): value is LetterStyle {
+  return typeof value === 'string' && (LETTER_STYLES as readonly string[]).includes(value);
+}
+
 function toNumber(raw: unknown): number {
   if (typeof raw === 'number') return raw;
   if (typeof raw === 'string' && raw.trim() !== '') return Number(raw);
@@ -111,16 +163,22 @@ function toNumber(raw: unknown): number {
 export function validatePartial(p: UntrustedState): Partial<LogoState> {
   const out: Partial<LogoState> = {};
   if (typeof p.text === 'string') out.text = sanitizeText(p.text);
-  if (typeof p.uppercase === 'boolean') out.uppercase = p.uppercase;
+  for (const key of ['uppercase', 'ring'] as const) {
+    if (typeof p[key] === 'boolean') out[key] = p[key];
+  }
   if (isShape(p.shape)) out.shape = p.shape;
   if (isFill(p.fill)) out.fill = p.fill;
+  if (isFill(p.fgFill)) out.fgFill = p.fgFill;
+  if (isLetterStyle(p.letterStyle)) out.letterStyle = p.letterStyle;
   if (isFontId(p.fontId)) out.fontId = p.fontId;
-  for (const key of ['bgColor', 'bgColor2', 'fgColor'] as const) {
+  const weight = toNumber(p.weight);
+  if (isWeight(weight)) out.weight = weight;
+  for (const key of ['bgColor', 'bgColor2', 'fgColor', 'fgColor2'] as const) {
     const v = p[key];
     const hex = typeof v === 'string' ? parseHex(v) : null;
     if (hex) out[key] = hex;
   }
-  for (const key of ['size', 'scale', 'spacing', 'gradientAngle'] as const) {
+  for (const key of Object.keys(LIMITS) as NumericKey[]) {
     if (!(key in p)) continue;
     const v = clampStep(toNumber(p[key]), LIMITS[key]);
     if (v !== null) out[key] = v;

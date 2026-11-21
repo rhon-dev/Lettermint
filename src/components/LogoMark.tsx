@@ -1,13 +1,11 @@
 import { useId, useMemo } from 'react';
 import type { Font } from 'opentype.js';
 import { buildLogo, type LogoGeometry } from '../lib/buildLogo';
-import { gradientVector } from '../lib/svg';
+import { gradientVector, letterGradientVector } from '../lib/svg';
 import type { LogoState } from '../store/logo';
 
-export type MarkState = Pick<
-  LogoState,
-  'text' | 'uppercase' | 'shape' | 'size' | 'scale' | 'spacing' | 'bgColor' | 'bgColor2' | 'fill' | 'gradientAngle' | 'fgColor'
->;
+/** Everything the renderer needs; the font itself is passed separately. */
+export type MarkState = Omit<LogoState, 'fontId' | 'weight'>;
 
 interface LogoMarkProps {
   state: MarkState;
@@ -23,8 +21,10 @@ interface LogoMarkProps {
 export function LogoMark({ state, font, className, label, geometry }: LogoMarkProps) {
   const gid = useId().replace(/:/g, '');
   const built = useMemo(() => geometry ?? buildLogo(state, font), [geometry, state, font]);
-  const gradient = state.fill === 'gradient';
-  const v = gradient ? gradientVector(state.gradientAngle, state.size) : null;
+  const bg = state.fill === 'gradient' ? gradientVector(state.gradientAngle, state.size) : null;
+  const fg = state.fgFill === 'gradient' ? letterGradientVector(state.gradientAngle, built, state.size) : null;
+  const fgPaint = fg ? `url(#f${gid})` : state.fgColor;
+  const outline = built.strokeWidth > 0;
 
   return (
     <svg
@@ -32,19 +32,41 @@ export function LogoMark({ state, font, className, label, geometry }: LogoMarkPr
       className={className}
       {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
     >
-      {v && (
+      {(bg || fg) && (
         <defs>
-          <linearGradient id={`g${gid}`} gradientUnits="userSpaceOnUse" x1={v.x1} y1={v.y1} x2={v.x2} y2={v.y2}>
-            <stop offset="0" stopColor={state.bgColor} />
-            <stop offset="1" stopColor={state.bgColor2} />
-          </linearGradient>
+          {bg && (
+            <linearGradient id={`b${gid}`} gradientUnits="userSpaceOnUse" x1={bg.x1} y1={bg.y1} x2={bg.x2} y2={bg.y2}>
+              <stop offset="0" stopColor={state.bgColor} />
+              <stop offset="1" stopColor={state.bgColor2} />
+            </linearGradient>
+          )}
+          {fg && (
+            <linearGradient id={`f${gid}`} gradientUnits="userSpaceOnUse" x1={fg.x1} y1={fg.y1} x2={fg.x2} y2={fg.y2}>
+              <stop offset="0" stopColor={state.fgColor} />
+              <stop offset="1" stopColor={state.fgColor2} />
+            </linearGradient>
+          )}
         </defs>
       )}
-      <path d={built.shapePath} fill={v ? `url(#g${gid})` : state.bgColor} className="transition-[fill] duration-150" />
+      {built.shapePath && (
+        <path d={built.shapePath} fill={bg ? `url(#b${gid})` : state.bgColor} className="transition-[fill] duration-150" />
+      )}
+      {built.ringPath && (
+        <path
+          d={built.ringPath}
+          transform={`translate(${built.ringOffset} ${built.ringOffset})`}
+          fill="none"
+          stroke={fgPaint}
+          strokeWidth={built.ringWidth}
+        />
+      )}
       {built.glyphPath && (
         <path
           d={built.glyphPath}
-          fill={state.fgColor}
+          fill={outline ? 'none' : fgPaint}
+          stroke={outline ? fgPaint : undefined}
+          strokeWidth={outline ? built.strokeWidth : undefined}
+          strokeLinejoin="round"
           opacity={built.placeholder ? 0.28 : 1}
           className="transition-[fill] duration-150"
         />
