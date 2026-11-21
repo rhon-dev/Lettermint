@@ -1,23 +1,23 @@
 import { useEffect, useMemo } from 'react';
 import { getFontDef } from '../fonts/registry';
-import { requestFont, useFontStore } from '../lib/glyphs';
+import { fontKey, requestFont, useFontStore } from '../lib/glyphs';
 import { displayText } from '../lib/sanitize';
 import { SHAPE_LABELS } from '../lib/shapes';
 import { variationSet, type Variation } from '../lib/variations';
-import { useLogoStore } from '../store/logo';
+import { useShallow } from 'zustand/react/shallow';
+import { pickState, useLogoStore } from '../store/logo';
 import { useUiStore } from '../store/ui';
 import { Icon } from './Icon';
 import { LogoMark } from './LogoMark';
 
 function VariationTile({ v, index }: { v: Variation; index: number }) {
-  const font = useFontStore((s) => s.fonts[v.fontId] ?? null);
-  const text = useLogoStore((s) => s.text);
-  const uppercase = useLogoStore((s) => s.uppercase);
-  const spacing = useLogoStore((s) => s.spacing);
+  const current = useLogoStore(useShallow(pickState));
+  const font = useFontStore((s) => s.fonts[fontKey(v.fontId, current.weight)] ?? null);
   const apply = useLogoStore((s) => s.apply);
   const notify = useUiStore((s) => s.notify);
   const family = getFontDef(v.fontId).family;
-  const state = useMemo(() => ({ ...v, text, uppercase, spacing, size: 256 }), [v, text, uppercase, spacing]);
+  // Applying a variation keeps the user's other settings, so the preview does too.
+  const state = useMemo(() => ({ ...current, ...v, size: 256 }), [current, v]);
 
   return (
     <li style={{ animationDelay: `${index * 40}ms` }} className="motion-safe:animate-pop-in [animation-fill-mode:both]">
@@ -48,11 +48,12 @@ export function Variations({ count = 8, compact = false }: { count?: number; com
   const seed = useUiStore((s) => s.seed);
   const shuffle = useUiStore((s) => s.shuffle);
   const text = useLogoStore((s) => displayText(s.text, s.uppercase));
+  const weight = useLogoStore((s) => s.weight);
   const list = useMemo(() => variationSet(seed, count), [seed, count]);
 
   useEffect(() => {
-    for (const v of list) void requestFont(v.fontId);
-  }, [list]);
+    for (const v of list) void requestFont(v.fontId, weight);
+  }, [list, weight]);
 
   return (
     <section aria-labelledby="variations-title" className="space-y-3">
