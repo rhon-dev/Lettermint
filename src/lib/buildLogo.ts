@@ -1,6 +1,6 @@
 import type { Font } from 'opentype.js';
 import { displayText } from './sanitize';
-import { fmt, safeBox, shapePath, type Shape } from './shapes';
+import { fmt, safeBox, shapePath, type Shape, type ShapeOpts } from './shapes';
 
 /** Path command shape produced by opentype.js (SVG coordinate space, y down). */
 export type GlyphCommand =
@@ -28,28 +28,99 @@ export interface LogoInput {
   scale: number;
   /** Extra space between two characters, in % of the em (applies to 2-char input). */
   spacing: number;
+  /** Rounded-square corner radius, % of the side. */
+  radius?: number;
+  /** Blob outline seed. */
+  blobSeed?: number;
+  /** Inner border ring inside the shape. */
+  ring?: boolean;
+  letterStyle?: 'fill' | 'outline';
+  /** Outline stroke width in ‰ of the canvas. */
+  stroke?: number;
+  /** Vertical shift of the second letter, % of the em (positive = up). */
+  shift?: number;
+  /** Rotation of each letter around its own center, degrees (clockwise). */
+  rotate1?: number;
+  rotate2?: number;
 }
 
 export interface LogoGeometry {
   viewBox: string;
   shapePath: string;
   glyphPath: string;
+  glyphCommands: GlyphCommand[];
   /** Final glyph bounding box in canvas coordinates, or null when nothing is drawn. */
   glyphBox: Box | null;
   /** True when the input is empty and glyphPath shows the "Aa" placeholder. */
   placeholder: boolean;
+  /** Outline stroke width in canvas units; 0 for filled letters. */
+  strokeWidth: number;
+  /** Ring outline (the shape at a smaller size), drawn translated by ringOffset; '' when off. */
+  ringPath: string;
+  ringOffset: number;
+  ringWidth: number;
 }
 
 export const PLACEHOLDER_TEXT = 'Aa';
 
+/** Ring geometry as fractions of the canvas. */
+export const RING_INNER = { scale: 0.86, width: 0.022 } as const;
+
+type Map2 = (x: number, y: number) => [number, number];
+
+export function mapCommands(cmds: readonly GlyphCommand[], f: Map2): GlyphCommand[] {
+  return cmds.map((c): GlyphCommand => {
+    switch (c.type) {
+      case 'M':
+      case 'L': {
+        const [x, y] = f(c.x, c.y);
+        return { type: c.type, x, y };
+      }
+      case 'Q': {
+        const [x1, y1] = f(c.x1, c.y1);
+        const [x, y] = f(c.x, c.y);
+        return { type: 'Q', x1, y1, x, y };
+      }
+      case 'C': {
+        const [x1, y1] = f(c.x1, c.y1);
+        const [x2, y2] = f(c.x2, c.y2);
+        const [x, y] = f(c.x, c.y);
+        return { type: 'C', x1, y1, x2, y2, x, y };
+      }
+      case 'Z':
+        return c;
+    }
+  });
+}
+
+/** Rotate (degrees, clockwise in y-down space) around the outline's own box center, then translate. */
+function placeLetter(cmds: GlyphCommand[], deg: number, dy: number): GlyphCommand[] {
+  if (deg === 0 && dy === 0) return cmds;
+  const box = commandsBox(cmds);
+  if (!box) return cmds;
+  const cx = (box.x1 + box.x2) / 2;
+  const cy = (box.y1 + box.y2) / 2;
+  const t = (deg * Math.PI) / 180;
+  const [cos, sin] = [Math.cos(t), Math.sin(t)];
+  return mapCommands(cmds, (x, y) => [cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos + dy]);
+}
+
+/** Per-letter adjustments for two-character marks. */
+export interface LetterPlacement {
+  shiftEm: number;
+  rotate: [number, number];
+}
+
 /** Lay out characters on a baseline at y = 0 in font units. */
-export function layoutGlyphs(font: GlyphFont, text: string, spacingEm: number): GlyphCommand[] {
+export function layoutGlyphs(font: GlyphFont, text: string, spacingEm: number, place?: LetterPlacement): GlyphCommand[] {
   const upm = font.unitsPerEm;
   const glyphs = Array.from(text, (c) => font.charToGlyph(c));
   const out: GlyphCommand[] = [];
   let x = 0;
   glyphs.forEach((glyph, i) => {
-    for (const cmd of glyph.getPath(x, 0, upm).commands) out.push(cmd as GlyphCommand);
+    let cmds = glyph.getPath(x, 0, upm).commands as GlyphCommand[];
+    if (place) cmds = placeLetter(cmds, place.rotate[i] ?? 0, i === 1 ? -place.shiftEm * upm : 0);
+    out.push(...cmds);
     x += glyph.advanceWidth ?? 0;
     const next = glyphs[i + 1];
     if (next) x += font.getKerningValue(glyph, next) + spacingEm * upm;
@@ -150,21 +221,30 @@ export function commandsBox(cmds: readonly GlyphCommand[]): Box | null {
   return { x1, y1, x2, y2 };
 }
 
+export interface FitOpts {
+  shapeOpts?: ShapeOpts;
+  /** Fit inside the shape scaled by this factor around the center (inner ring). */
+  inset?: number;
+  /** Extra width/height the drawn glyphs need beyond their outline (outline stroke), canvas units. */
+  pad?: number;
+}
+
 /**
  * Scale so the glyph box height is `scalePct`% of the canvas, capped so the
- * box fits inside the shape, then center the box on the canvas center.
+ * box (plus `pad`) fits inside the shape, then center the box on the canvas center.
  */
 export function fitGlyphBox(
   box: Box,
   shape: Shape,
   size: number,
   scalePct: number,
+  { shapeOpts, inset = 1, pad = 0 }: FitOpts = {},
 ): { k: number; tx: number; ty: number } {
   const w = box.x2 - box.x1;
   const h = box.y2 - box.y1;
   const targetK = (size * scalePct) / 100 / h;
-  const safe = safeBox(shape, size, w / h);
-  const k = Math.min(targetK, safe.height / h, safe.width / w);
+  const safe = safeBox(shape, size * inset, w / h, shapeOpts);
+  const k = Math.max(1e-9, Math.min(targetK, (safe.height - pad) / h, (safe.width - pad) / w));
   return {
     k,
     tx: size / 2 - ((box.x1 + box.x2) / 2) * k,
@@ -173,21 +253,7 @@ export function fitGlyphBox(
 }
 
 export function transformCommands(cmds: readonly GlyphCommand[], k: number, tx: number, ty: number): GlyphCommand[] {
-  const X = (x: number) => x * k + tx;
-  const Y = (y: number) => y * k + ty;
-  return cmds.map((c): GlyphCommand => {
-    switch (c.type) {
-      case 'M':
-      case 'L':
-        return { type: c.type, x: X(c.x), y: Y(c.y) };
-      case 'Q':
-        return { type: 'Q', x1: X(c.x1), y1: Y(c.y1), x: X(c.x), y: Y(c.y) };
-      case 'C':
-        return { type: 'C', x1: X(c.x1), y1: Y(c.y1), x2: X(c.x2), y2: Y(c.y2), x: X(c.x), y: Y(c.y) };
-      case 'Z':
-        return c;
-    }
-  });
+  return mapCommands(cmds, (x, y) => [x * k + tx, y * k + ty]);
 }
 
 export function toPathData(cmds: readonly GlyphCommand[]): string {
@@ -221,12 +287,12 @@ export interface GlyphBuild {
 export function buildGlyphs(
   font: GlyphFont,
   text: string,
-  opts: { shape: Shape; size: number; scale: number; spacingEm: number },
+  opts: { shape: Shape; size: number; scale: number; spacingEm: number; place?: LetterPlacement } & FitOpts,
 ): GlyphBuild {
-  const raw = layoutGlyphs(font, text, opts.spacingEm);
+  const raw = layoutGlyphs(font, text, opts.spacingEm, opts.place);
   const src = commandsBox(raw);
   if (!src) return { commands: [], d: '', box: null };
-  const { k, tx, ty } = fitGlyphBox(src, opts.shape, opts.size, opts.scale);
+  const { k, tx, ty } = fitGlyphBox(src, opts.shape, opts.size, opts.scale, opts);
   const commands = transformCommands(raw, k, tx, ty);
   return {
     commands,
@@ -237,18 +303,37 @@ export function buildGlyphs(
 
 /** Pure geometry for the whole logo. React components only render the result. */
 export function buildLogo(state: LogoInput, font: GlyphFont | null): LogoGeometry {
+  const { size, shape } = state;
   const text = displayText(state.text, state.uppercase);
   const placeholder = text.length === 0;
   const shown = placeholder ? PLACEHOLDER_TEXT : text;
-  const spacingEm = !placeholder && Array.from(shown).length === 2 ? state.spacing / 100 : 0;
+  const pair = !placeholder && Array.from(shown).length === 2;
+  const shapeOpts: ShapeOpts = { radius: state.radius, seed: state.blobSeed };
+  const ring = state.ring === true && shape !== 'none';
+  const strokeWidth = state.letterStyle === 'outline' ? (size * (state.stroke ?? 30)) / 1000 : 0;
   const glyphs = font
-    ? buildGlyphs(font, shown, { shape: state.shape, size: state.size, scale: state.scale, spacingEm })
+    ? buildGlyphs(font, shown, {
+        shape,
+        size,
+        scale: state.scale,
+        spacingEm: pair ? state.spacing / 100 : 0,
+        place: pair ? { shiftEm: (state.shift ?? 0) / 100, rotate: [state.rotate1 ?? 0, state.rotate2 ?? 0] } : undefined,
+        shapeOpts,
+        inset: ring ? RING_INNER.scale - RING_INNER.width * 2 : 1,
+        pad: strokeWidth,
+      })
     : null;
+  const ringSize = size * RING_INNER.scale;
   return {
-    viewBox: `0 0 ${state.size} ${state.size}`,
-    shapePath: shapePath(state.shape, state.size),
+    viewBox: `0 0 ${size} ${size}`,
+    shapePath: shapePath(shape, size, shapeOpts),
     glyphPath: glyphs?.d ?? '',
+    glyphCommands: glyphs?.commands ?? [],
     glyphBox: glyphs?.box ?? null,
     placeholder,
+    strokeWidth,
+    ringPath: ring ? shapePath(shape, ringSize, shapeOpts) : '',
+    ringOffset: (size - ringSize) / 2,
+    ringWidth: size * RING_INNER.width,
   };
 }

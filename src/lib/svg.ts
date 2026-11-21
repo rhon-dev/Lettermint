@@ -7,39 +7,78 @@ export interface Paint {
   fill: 'solid' | 'gradient';
   gradientAngle: number;
   fgColor: string;
+  fgColor2: string;
+  fgFill: 'solid' | 'gradient';
+  letterStyle: 'fill' | 'outline';
   size: number;
 }
 
-/** Gradient line for a CSS-style angle (0° = bottom→top, 90° = left→right), spanning the canvas. */
-export function gradientVector(angleDeg: number, size: number): { x1: number; y1: number; x2: number; y2: number } {
+export interface Vector {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/**
+ * Gradient line for a CSS-style angle (0° = bottom→top, 90° = left→right)
+ * spanning a w×h rectangle at (x, y), so the 0%/100% stops touch its corners (same as CSS).
+ */
+export function gradientVector(angleDeg: number, w: number, h = w, x = 0, y = 0): Vector {
   const t = (angleDeg * Math.PI) / 180;
   const dx = Math.sin(t);
   const dy = -Math.cos(t);
-  // Half-length so the 0%/100% stops touch the canvas corners (same as CSS).
-  const half = (size / 2) * (Math.abs(dx) + Math.abs(dy));
-  const c = size / 2;
-  return { x1: c - dx * half, y1: c - dy * half, x2: c + dx * half, y2: c + dy * half };
+  const half = (w * Math.abs(dx) + h * Math.abs(dy)) / 2;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  return { x1: cx - dx * half, y1: cy - dy * half, x2: cx + dx * half, y2: cy + dy * half };
 }
 
-function escapeAttr(s: string): string {
+/** Letter gradient follows the glyph box so both stops are visible on the letters. */
+export function letterGradientVector(angleDeg: number, geo: LogoGeometry, size: number): Vector {
+  const b = geo.glyphBox;
+  return b ? gradientVector(angleDeg, b.x2 - b.x1, b.y2 - b.y1, b.x1, b.y1) : gradientVector(angleDeg, size);
+}
+
+export function escapeAttr(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function linear(id: string, v: Vector, a: string, b: string): string {
+  return (
+    `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${fmt(v.x1)}" y1="${fmt(v.y1)}" x2="${fmt(v.x2)}" y2="${fmt(v.y2)}">` +
+    `<stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`
+  );
+}
+
+/** Inner SVG markup (defs + paths) for a logo; `idPrefix` keeps gradient ids unique when nested. */
+export function logoSvgBody(paint: Paint, geo: LogoGeometry, idPrefix = 'lm'): string {
+  const bgGrad = paint.fill === 'gradient';
+  const fgGrad = paint.fgFill === 'gradient';
+  let defs = '';
+  if (bgGrad) defs += linear(`${idPrefix}-bg`, gradientVector(paint.gradientAngle, paint.size), paint.bgColor, paint.bgColor2);
+  if (fgGrad) defs += linear(`${idPrefix}-fg`, letterGradientVector(paint.gradientAngle, geo, paint.size), paint.fgColor, paint.fgColor2);
+  const fg = fgGrad ? `url(#${idPrefix}-fg)` : paint.fgColor;
+  let body = defs ? `<defs>${defs}</defs>` : '';
+  if (geo.shapePath) body += `<path d="${geo.shapePath}" fill="${bgGrad ? `url(#${idPrefix}-bg)` : paint.bgColor}"/>`;
+  if (geo.ringPath) {
+    const o = fmt(geo.ringOffset);
+    body += `<path d="${geo.ringPath}" transform="translate(${o} ${o})" fill="none" stroke="${fg}" stroke-width="${fmt(geo.ringWidth)}"/>`;
+  }
+  if (geo.glyphPath && !geo.placeholder) {
+    body +=
+      geo.strokeWidth > 0
+        ? `<path d="${geo.glyphPath}" fill="none" stroke="${fg}" stroke-width="${fmt(geo.strokeWidth)}" stroke-linejoin="round"/>`
+        : `<path d="${geo.glyphPath}" fill="${fg}"/>`;
+  }
+  return body;
 }
 
 /** Standalone, dependency-free SVG document for export. */
 export function logoSvgString(paint: Paint, geo: LogoGeometry, title: string): string {
   const s = paint.size;
-  const gradient = paint.fill === 'gradient';
-  let defs = '';
-  if (gradient) {
-    const v = gradientVector(paint.gradientAngle, s);
-    defs =
-      `<defs><linearGradient id="lm-bg" gradientUnits="userSpaceOnUse" x1="${fmt(v.x1)}" y1="${fmt(v.y1)}" x2="${fmt(v.x2)}" y2="${fmt(v.y2)}">` +
-      `<stop offset="0" stop-color="${paint.bgColor}"/><stop offset="1" stop-color="${paint.bgColor2}"/></linearGradient></defs>`;
-  }
-  const glyph = geo.glyphPath && !geo.placeholder ? `<path d="${geo.glyphPath}" fill="${paint.fgColor}"/>` : '';
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${geo.viewBox}" width="${s}" height="${s}" role="img">` +
-    `<title>${escapeAttr(title)}</title>${defs}` +
-    `<path d="${geo.shapePath}" fill="${gradient ? 'url(#lm-bg)' : paint.bgColor}"/>${glyph}</svg>`
+    `<title>${escapeAttr(title)}</title>${logoSvgBody(paint, geo)}</svg>`
   );
 }

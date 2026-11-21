@@ -1,67 +1,76 @@
 import type { Font } from 'opentype.js';
 import { create } from 'zustand';
-import { getFontDef, type FontId } from '../fonts/registry';
+import { fontUrl, nearestWeight, type FontId, type Weight } from '../fonts/registry';
 
-const cache = new Map<FontId, Promise<Font>>();
+/** Cache key for one family at one shipped weight, e.g. "inter:700". */
+export type FontKey = `${FontId}:${Weight}`;
+
+export function fontKey(id: FontId, weight: Weight): FontKey {
+  return `${id}:${nearestWeight(id, weight)}`;
+}
+
+const cache = new Map<FontKey, Promise<Font>>();
 
 /** Fetch + parse a self-hosted font once; concurrent callers share the same promise. */
-export function loadFont(id: FontId): Promise<Font> {
-  const cached = cache.get(id);
+export function loadFont(id: FontId, weight: Weight): Promise<Font> {
+  const key = fontKey(id, weight);
+  const cached = cache.get(key);
   if (cached) return cached;
-  const { url } = getFontDef(id);
   const promise = Promise.all([
     import('opentype.js'),
-    fetch(url).then((res) => {
-      if (!res.ok) throw new Error(`Font ${id}: HTTP ${res.status}`);
+    fetch(fontUrl(id, weight)).then((res) => {
+      if (!res.ok) throw new Error(`Font ${key}: HTTP ${res.status}`);
       return res.arrayBuffer();
     }),
   ]).then(([opentype, buffer]) => opentype.parse(buffer));
-  cache.set(id, promise);
+  cache.set(key, promise);
   // Allow a retry after a failed load.
-  promise.catch(() => cache.delete(id));
+  promise.catch(() => cache.delete(key));
   return promise;
 }
 
 export type FontStatus = 'loading' | 'ready' | 'error';
 
 interface FontStore {
-  fonts: Partial<Record<FontId, Font>>;
-  status: Partial<Record<FontId, FontStatus>>;
+  fonts: Partial<Record<FontKey, Font>>;
+  status: Partial<Record<FontKey, FontStatus>>;
   /** Font currently shown in the preview: the last selected font that finished loading. */
-  activeId: FontId | null;
+  activeKey: FontKey | null;
 }
 
-export const useFontStore = create<FontStore>()(() => ({ fonts: {}, status: {}, activeId: null }));
+export const useFontStore = create<FontStore>()(() => ({ fonts: {}, status: {}, activeKey: null }));
 
-function setStatus(id: FontId, status: FontStatus): void {
-  useFontStore.setState((s) => ({ status: { ...s.status, [id]: status } }));
+function setStatus(key: FontKey, status: FontStatus): void {
+  useFontStore.setState((s) => ({ status: { ...s.status, [key]: status } }));
 }
 
-/** Load a font into the store (used by picker tiles and selection). */
-export function requestFont(id: FontId): Promise<Font | null> {
-  const current = useFontStore.getState().status[id];
-  if (current === undefined || current === 'error') setStatus(id, 'loading');
-  return loadFont(id).then(
+/** Load a font into the store (used by picker tiles, the gallery and selection). */
+export function requestFont(id: FontId, weight: Weight): Promise<Font | null> {
+  const key = fontKey(id, weight);
+  const current = useFontStore.getState().status[key];
+  if (current === undefined || current === 'error') setStatus(key, 'loading');
+  return loadFont(id, weight).then(
     (font) => {
       useFontStore.setState((s) => ({
-        fonts: { ...s.fonts, [id]: font },
-        status: { ...s.status, [id]: 'ready' },
+        fonts: { ...s.fonts, [key]: font },
+        status: { ...s.status, [key]: 'ready' },
       }));
       return font;
     },
     () => {
-      setStatus(id, 'error');
+      setStatus(key, 'error');
       return null;
     },
   );
 }
 
-let latestSelection: FontId | null = null;
+let latestSelection: FontKey | null = null;
 
-/** Switch the preview to `id` once it is ready; until then the previous font stays visible. */
-export function selectFont(id: FontId): void {
-  latestSelection = id;
-  void requestFont(id).then((font) => {
-    if (font && latestSelection === id) useFontStore.setState({ activeId: id });
+/** Switch the preview to the font once it is ready; until then the previous font stays visible. */
+export function selectFont(id: FontId, weight: Weight): void {
+  const key = fontKey(id, weight);
+  latestSelection = key;
+  void requestFont(id, weight).then((font) => {
+    if (font && latestSelection === key) useFontStore.setState({ activeKey: key });
   });
 }
