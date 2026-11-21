@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { Font } from 'opentype.js';
 import { FONTS } from '../fonts/registry';
 import { buildLogo } from '../lib/buildLogo';
-import { requestFont, useFontStore } from '../lib/glyphs';
+import { fontKey, requestFont, useFontStore } from '../lib/glyphs';
 import { displayText } from '../lib/sanitize';
 import { useLogoStore } from '../store/logo';
 
@@ -20,8 +20,10 @@ function TileGlyphs({ font, text }: { font: Font; text: string }) {
 
 function FontTile({ def, text, checked, onSelect }: { def: (typeof FONTS)[number]; text: string; checked: boolean; onSelect: () => void }) {
   const ref = useRef<HTMLLabelElement>(null);
-  const font = useFontStore((s) => s.fonts[def.id]);
-  const status = useFontStore((s) => s.status[def.id]);
+  const weight = useLogoStore((s) => s.weight);
+  const key = fontKey(def.id, weight);
+  const font = useFontStore((s) => s.fonts[key]);
+  const status = useFontStore((s) => s.status[key]);
 
   // Load the tile's font only once the tile is (nearly) visible.
   useEffect(() => {
@@ -30,7 +32,7 @@ function FontTile({ def, text, checked, onSelect }: { def: (typeof FONTS)[number
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          void requestFont(def.id);
+          void requestFont(def.id, weight);
           io.disconnect();
         }
       },
@@ -38,7 +40,7 @@ function FontTile({ def, text, checked, onSelect }: { def: (typeof FONTS)[number
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [def.id]);
+  }, [def.id, weight]);
 
   return (
     <label ref={ref} className="cursor-pointer">
