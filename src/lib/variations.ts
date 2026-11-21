@@ -21,7 +21,7 @@ export function randomVariation(rand: () => number): Variation {
   const palette = pick(rand, PALETTES);
   const fill = rand() < 0.35 ? 'gradient' : 'solid';
   return {
-    shape: pick(rand, SHAPES),
+    shape: pick(rand, SHAPES.filter((s) => s !== 'none')),
     fontId: pick(rand, FONTS).id as FontId,
     bgColor: palette.bg,
     bgColor2: palette.bg2,

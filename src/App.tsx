@@ -82,11 +82,12 @@ function MobileLayout() {
 export function App() {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const fontId = useLogoStore((s) => s.fontId);
+  const weight = useLogoStore((s) => s.weight);
   useShortcuts();
 
   useEffect(() => {
-    selectFont(fontId);
-  }, [fontId]);
+    selectFont(fontId, weight);
+  }, [fontId, weight]);
 
   return (
     <>

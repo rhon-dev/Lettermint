@@ -117,11 +117,8 @@ describe('Phase 3 export paint', () => {
   const geo = buildLogo({ ...base, ring: true, letterStyle: 'outline', stroke: 40 }, inter);
 
   it('exports outline strokes, the ring and a letter gradient', () => {
-    const svg = logoSvgString(
-      { ...DEFAULTS, ring: true, letterStyle: 'outline', fgFill: 'gradient', fgColor2: '#ff0000' },
-      geo,
-      't',
-    );
+    const paint = { ...DEFAULTS, ring: true, letterStyle: 'outline' as const, fgFill: 'gradient' as const, fgColor2: '#ff0000' };
+    const svg = logoSvgString(paint, geo, 't');
     expect(svg).toContain('<linearGradient id="lm-fg"');
     expect(svg).toContain('stroke="url(#lm-fg)"');
     expect(svg).toContain('fill="none"');
@@ -131,7 +128,8 @@ describe('Phase 3 export paint', () => {
 
   it('omits the background path when the shape is none', () => {
     const none = buildLogo({ ...base, shape: 'none' }, inter);
-    const svg = logoSvgString({ ...DEFAULTS, shape: 'none' }, none, 't');
+    const paint = { ...DEFAULTS, shape: 'none' as const };
+    const svg = logoSvgString(paint, none, 't');
     expect(svg.match(/<path/g)).toHaveLength(1);
   });
 

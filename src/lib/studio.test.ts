@@ -71,7 +71,18 @@ describe('gradientVector', () => {
 });
 
 describe('logoSvgString', () => {
-  const geo = { viewBox: '0 0 10 10', shapePath: 'M0 0H10V10H0Z', glyphPath: 'M1 1L2 2Z', glyphBox: null, placeholder: false };
+  const geo = {
+    viewBox: '0 0 10 10',
+    shapePath: 'M0 0H10V10H0Z',
+    glyphPath: 'M1 1L2 2Z',
+    glyphCommands: [],
+    glyphBox: null,
+    placeholder: false,
+    strokeWidth: 0,
+    ringPath: '',
+    ringOffset: 0,
+    ringWidth: 0,
+  };
   const paint = { ...DEFAULTS, size: 10 };
 
   it('emits a solid standalone SVG with an escaped title', () => {
