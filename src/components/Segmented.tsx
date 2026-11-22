@@ -34,7 +34,7 @@ export function Segmented<T extends string | number>({ legend, name, options, va
               onChange={() => onChange(o.value)}
               className="peer sr-only"
             />
-            <span className="flex min-h-10 items-center justify-center gap-2 rounded-[0.7rem] px-1 text-center text-sm text-stone-600 transition-colors duration-150 peer-checked:bg-white peer-checked:text-stone-900 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-mint-500 peer-disabled:opacity-40 dark:text-stone-400 dark:peer-checked:bg-stone-950 dark:peer-checked:text-stone-100">
+            <span className="flex min-h-11 items-center justify-center gap-2 rounded-[0.7rem] px-1 text-center text-sm text-stone-600 transition-colors duration-150 peer-checked:bg-white peer-checked:text-stone-900 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-mint-500 peer-disabled:opacity-40 dark:text-stone-400 dark:peer-checked:bg-stone-950 dark:peer-checked:text-stone-100">
               {o.label}
             </span>
           </label>

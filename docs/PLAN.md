@@ -1,7 +1,6 @@
 # Lettermint — Product & UI/UX Roadmap
 
-> Status: Phase 1 (initials editor) shipped. **Phase 2 (Studio) is in progress.**
-> Phases 3–6 are planned and each one stands on its own, so later work does not need a redesign.
+> Status: Phases 1–5 shipped (editor, studio, craft, brand kit, launch polish). Phases 6–7 are planned and each one stands on its own, so later work does not need a redesign.
 
 ## 1. Why change
 
@@ -41,7 +40,7 @@ Tokens are defined in `src/index.css` (`--color-ink-*`, `--color-mint-*`, `--aur
 
 ## 3. Phases
 
-### Phase 2 — Studio *(this iteration)*
+### Phase 2 — Studio *(shipped)*
 | Feature | Notes |
 |---|---|
 | Redesigned shell | Top bar (brand, undo/redo, shuffle, theme, share, **Export**), bento editor layout, refreshed mobile bottom sheet |
@@ -60,17 +59,30 @@ Tokens are defined in `src/index.css` (`--color-ink-*`, `--color-mint-*`, `--aur
 - Per-letter offset/rotation for monogram interlocks
 - Variable-font weight axis (needs WOFF→TTF variable sources)
 
-### Phase 4 — Brand kit
+### Phase 4 — Brand kit *(shipped: Export dialog → Kit)*
 - One-click ZIP: favicon.ico + PNG set (16/32/180/192/512), `site.webmanifest`, social avatar, OG image (1200×630)
 - Auto-generated palette (tints/shades plus a complementary colour) exported as CSS variables and Tailwind config
 - Wordmark lockup: mark + full name, horizontal/stacked
+- Implementation: pure `lib/brandkit` (palette, lockups, OG, manifest), `lib/zip` (stored ZIP), `lib/ico`
+  (PNG-in-ICO); `exporter.brandKitZip` only rasterises and packs. Lockup text is converted to paths, so
+  files need no fonts. `brandName` is part of `LogoState` (autosave, share link `n=`, undo).
 
-### Phase 5 — Generative / AI (still $0, client-side)
+### Phase 5 — Launch polish *(shipped, no new features)*
+- Responsive pass at 360/768/1280 px: 44px targets, export dialog scrolls within the mobile viewport
+- Accessibility: in-dialog live region (the page behind a modal is inert), AA contrast for the primary button,
+  gradient text and size chips, higher-contrast switch track
+- Performance: export code lazy-loaded; gallery fonts wait for the selected font; logo fonts runtime-cached by
+  the service worker instead of precaching all 60
+- Error states: blocked clipboard, export failure, font load failure, unsupported characters, damaged share links
+- SEO: meta, Open Graph and Twitter tags, canonical placeholder, robots.txt, sitemap, icons and OG image generated
+  by the app's own brand-kit export
+
+### Phase 6 — Generative / AI (still $0, client-side)
 - "Describe your vibe" keywords that map to font/shape/palette weights (rule-based first)
 - Seeded variation URLs (`#seed=…`) so a set of results can be shared
 - Optional on-device model later; no server is required
 
-### Phase 6 — Platform
+### Phase 7 — Platform
 - Saved library (IndexedDB) with named projects
 - Installable PWA manifest and icons, share target
 - i18n and RTL review

@@ -43,7 +43,7 @@ export function TopBar({ compact = false }: { compact?: boolean }) {
       await copyText(shareUrl());
       notify('Share link copied');
     } catch {
-      notify('Clipboard is unavailable in this browser');
+      notify("Couldn't copy: clipboard access is blocked. Copy the address bar URL instead.");
     }
   };
 

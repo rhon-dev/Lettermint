@@ -50,10 +50,12 @@ export function Variations({ count = 8, compact = false }: { count?: number; com
   const text = useLogoStore((s) => displayText(s.text, s.uppercase));
   const weight = useLogoStore((s) => s.weight);
   const list = useMemo(() => variationSet(seed, count), [seed, count]);
+  // Gallery fonts wait for the selected font, so the main preview never queues behind them.
+  const mainReady = useFontStore((s) => s.activeKey !== null);
 
   useEffect(() => {
-    for (const v of list) void requestFont(v.fontId, weight);
-  }, [list, weight]);
+    if (mainReady) for (const v of list) void requestFont(v.fontId, weight);
+  }, [list, weight, mainReady]);
 
   return (
     <section aria-labelledby="variations-title" className="space-y-3">

@@ -2,7 +2,8 @@ import { useUiStore } from '../store/ui';
 
 /** Single polite live region; never steals focus. */
 export function Toast() {
-  const toast = useUiStore((s) => s.toast);
+  // While the export dialog is open the rest of the page is inert, so the dialog announces instead.
+  const toast = useUiStore((s) => (s.exportOpen ? null : s.toast));
   return (
     <div aria-live="polite" role="status" className="pointer-events-none fixed inset-x-0 bottom-0 z-50">
       {toast && (

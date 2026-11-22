@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# TODO(launch): replace with the production domain.
+Sitemap: https://lettermint.example.com/sitemap.xml

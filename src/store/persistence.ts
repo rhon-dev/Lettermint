@@ -1,5 +1,6 @@
 import { History } from '../lib/history';
-import { decodeState, encodeState } from '../lib/share';
+import { encodeState, readShareHash } from '../lib/share';
+import { useUiStore } from './ui';
 import { create } from 'zustand';
 import { pickState, sameState, useLogoStore, type LogoState } from './logo';
 
@@ -45,7 +46,9 @@ export function initPersistence(): void {
   } catch {
     // Corrupt or unavailable storage: start from defaults.
   }
-  if (window.location.hash.length > 1) apply(decodeState(window.location.hash));
+  const link = readShareHash(window.location.hash);
+  apply(link.state);
+  if (link.damaged) useUiStore.getState().notify("Couldn't read that share link. Nothing was changed.");
 
   history = new History(pickState(useLogoStore.getState()), sameState);
   syncFlags();

@@ -13,10 +13,18 @@ export default defineConfig({
       injectRegister: false,
       manifest: false,
       workbox: {
-        // Precache the app shell, every font file and the license notes so the
-        // app works fully offline after the first visit.
-        globPatterns: ['**/*.{js,css,html,svg,woff,woff2,md}'],
+        // Precache the app shell (UI fonts are .woff2) and license notes. Logo fonts
+        // (.woff, ~20 kB each, 60 files) are cached only once used, so a first visit
+        // does not download all of them; fonts used before keep working offline.
+        globPatterns: ['**/*.{js,css,html,svg,woff2,md,png,ico}'],
         cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith('.woff'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'logo-fonts', expiration: { maxEntries: 80 } },
+          },
+        ],
       },
     }),
   ],

@@ -49,10 +49,10 @@ export function Preview({ className = '', showSize = true }: { className?: strin
             aria-label={`${b.label} backdrop`}
             title={`${b.label} backdrop`}
             onClick={() => setBackdrop(b.id)}
-            className="focus-ring grid h-8 w-8 cursor-pointer place-items-center rounded-full transition-transform duration-150 active:scale-95"
+            className="focus-ring grid h-11 w-11 cursor-pointer place-items-center rounded-full transition-transform duration-150 active:scale-95"
           >
             <span
-              className={`h-5 w-5 rounded-full ring-1 ring-black/15 dark:ring-white/20 ${b.swatch} ${
+              className={`h-6 w-6 rounded-full ring-1 ring-black/15 dark:ring-white/20 ${b.swatch} ${
                 backdrop === b.id ? 'outline-2 outline-offset-2 outline-mint-500' : ''
               }`}
             />

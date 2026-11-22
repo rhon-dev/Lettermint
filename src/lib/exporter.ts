@@ -15,8 +15,8 @@ export function svgBlob(svg: string): Blob {
   return new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
 }
 
-/** Rasterise an SVG string to a square PNG of `px` pixels. */
-export async function svgToPng(svg: string, px: number): Promise<Blob> {
+/** Rasterise an SVG string to a `px`×`height` PNG (square by default). */
+export async function svgToPng(svg: string, px: number, height = px): Promise<Blob> {
   const url = URL.createObjectURL(svgBlob(svg));
   try {
     const img = new Image();
@@ -25,11 +25,11 @@ export async function svgToPng(svg: string, px: number): Promise<Blob> {
     await img.decode();
     const canvas = document.createElement('canvas');
     canvas.width = px;
-    canvas.height = px;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D is unavailable');
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, 0, 0, px, px);
+    ctx.drawImage(img, 0, 0, px, height);
     return await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encoding failed'))), 'image/png'),
     );

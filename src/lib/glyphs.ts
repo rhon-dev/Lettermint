@@ -67,10 +67,11 @@ export function requestFont(id: FontId, weight: Weight): Promise<Font | null> {
 let latestSelection: FontKey | null = null;
 
 /** Switch the preview to the font once it is ready; until then the previous font stays visible. */
-export function selectFont(id: FontId, weight: Weight): void {
+export function selectFont(id: FontId, weight: Weight): Promise<Font | null> {
   const key = fontKey(id, weight);
   latestSelection = key;
-  void requestFont(id, weight).then((font) => {
+  return requestFont(id, weight).then((font) => {
     if (font && latestSelection === key) useFontStore.setState({ activeKey: key });
+    return font;
   });
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { parseHex } from '../lib/color';
-import { sanitizeText } from '../lib/sanitize';
+import { sanitizeName, sanitizeText } from '../lib/sanitize';
 import { DEFAULT_RADIUS, DEFAULT_SEED, isShape, type Shape } from '../lib/shapes';
 import { DEFAULT_FONT_ID, isFontId, isWeight, type FontId, type Weight } from '../fonts/registry';
 
@@ -62,6 +62,8 @@ export interface LogoState {
   shift: number;
   rotate1: number;
   rotate2: number;
+  /** Optional brand name for lockups and the kit (sanitized; may end in one space while typing). */
+  brandName: string;
 }
 
 export const STATE_KEYS = [
@@ -88,12 +90,14 @@ export const STATE_KEYS = [
   'shift',
   'rotate1',
   'rotate2',
+  'brandName',
 ] as const satisfies readonly (keyof LogoState)[];
 
 export type UntrustedState = Partial<Record<keyof LogoState, unknown>>;
 
 export interface LogoActions {
   setText: (raw: string) => void;
+  setBrandName: (raw: string) => void;
   setUppercase: (on: boolean) => void;
   setShape: (shape: string) => void;
   setBgColor: (hex: string) => void;
@@ -135,6 +139,7 @@ export const DEFAULTS: LogoState = {
   shift: 0,
   rotate1: 0,
   rotate2: 0,
+  brandName: '',
 };
 
 /** Clamp to [min, max] and snap to the step grid. Returns null for non-finite input. */
@@ -163,6 +168,7 @@ function toNumber(raw: unknown): number {
 export function validatePartial(p: UntrustedState): Partial<LogoState> {
   const out: Partial<LogoState> = {};
   if (typeof p.text === 'string') out.text = sanitizeText(p.text);
+  if (typeof p.brandName === 'string') out.brandName = sanitizeName(p.brandName);
   for (const key of ['uppercase', 'ring'] as const) {
     if (typeof p[key] === 'boolean') out[key] = p[key];
   }
@@ -205,6 +211,7 @@ export const useLogoStore = create<LogoState & LogoActions>()((set, get) => {
   return {
     ...DEFAULTS,
     setText: (raw) => set({ text: sanitizeText(raw) }),
+    setBrandName: (raw) => set({ brandName: sanitizeName(raw) }),
     setUppercase: (on) => set({ uppercase: on === true }),
     setShape: (shape) => apply({ shape }),
     setBgColor: (bgColor) => apply({ bgColor }),

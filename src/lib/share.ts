@@ -1,4 +1,4 @@
-import { DEFAULTS, type LogoState } from '../store/logo';
+import { DEFAULTS, validatePartial, type LogoState } from '../store/logo';
 
 /** Short URL keys; order is the encoding order. */
 const KEYS = {
@@ -25,6 +25,7 @@ const KEYS = {
   shift: 'sy',
   rotate1: 'r1',
   rotate2: 'r2',
+  brandName: 'n',
 } as const satisfies Record<keyof LogoState, string>;
 
 const COLORS = new Set<keyof LogoState>(['bgColor', 'bgColor2', 'fgColor', 'fgColor2']);
@@ -58,4 +59,14 @@ export function decodeState(hash: string): Partial<Record<keyof LogoState, unkno
     else out[field] = raw;
   }
   return out;
+}
+
+/**
+ * Read a share link. `damaged` means the hash had content but nothing in it was usable,
+ * so the caller keeps the current (autosaved or default) logo and can tell the user.
+ */
+export function readShareHash(hash: string): { state: Partial<LogoState>; damaged: boolean } {
+  if (hash.replace(/^#/, '') === '') return { state: {}, damaged: false };
+  const state = validatePartial(decodeState(hash));
+  return { state, damaged: Object.keys(state).length === 0 };
 }

@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react';
 import { BottomSheet } from './components/BottomSheet';
 import { Controls } from './components/Controls';
-import { ExportDialog } from './components/ExportDialog';
 import { Mockups } from './components/Mockups';
 import { Preview } from './components/Preview';
 import { Toast } from './components/Toast';
@@ -12,6 +11,21 @@ import { useMediaQuery, useViewportHeight } from './hooks/useMedia';
 import { useShortcuts } from './hooks/useShortcuts';
 import { selectFont } from './lib/glyphs';
 import { useLogoStore } from './store/logo';
+import { useUiStore } from './store/ui';
+
+// Export code (dialog, brand kit, ZIP writer) loads on first open, not with the editor.
+const ExportDialog = lazy(
+  (): Promise<{ default: ComponentType }> =>
+    import('./components/ExportDialog').then(
+      (m) => ({ default: m.ExportDialog }),
+      () => {
+        // Offline before the chunk was cached: keep the editor alive and explain.
+        useUiStore.getState().setExportOpen(false);
+        useUiStore.getState().notify("Export couldn't load. Check your connection and reload the page.");
+        return { default: () => null };
+      },
+    ),
+);
 
 function Footer() {
   return (
@@ -83,11 +97,17 @@ export function App() {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const fontId = useLogoStore((s) => s.fontId);
   const weight = useLogoStore((s) => s.weight);
+  const exportOpen = useUiStore((s) => s.exportOpen);
+  const notify = useUiStore((s) => s.notify);
+  const [exportLoaded, setExportLoaded] = useState(false);
+  if (exportOpen && !exportLoaded) setExportLoaded(true);
   useShortcuts();
 
   useEffect(() => {
-    selectFont(fontId, weight);
-  }, [fontId, weight]);
+    void selectFont(fontId, weight).then((font) => {
+      if (!font) notify("This font couldn't load. Check your connection and try again.");
+    });
+  }, [fontId, weight, notify]);
 
   return (
     <>
@@ -98,7 +118,11 @@ export function App() {
         Skip to editor
       </a>
       {isDesktop ? <DesktopLayout /> : <MobileLayout />}
-      <ExportDialog />
+      {exportLoaded && (
+        <Suspense fallback={null}>
+          <ExportDialog />
+        </Suspense>
+      )}
       <Toast />
     </>
   );

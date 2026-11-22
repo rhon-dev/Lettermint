@@ -6,6 +6,15 @@ const s = () => useLogoStore.getState();
 describe('logo store', () => {
   beforeEach(() => s().reset());
 
+  it('sanitizes the brand name on every write path', () => {
+    s().setBrandName('<b>Lena</b> & Co');
+    expect(s().brandName).toBe('Lena & Co');
+    s().apply({ brandName: '<script>x</script>Ж' });
+    expect(s().brandName).toBe('x');
+    s().apply({ brandName: 42 });
+    expect(s().brandName).toBe('x');
+  });
+
   it('starts with the spec defaults', () => {
     expect(s()).toMatchObject({
       text: 'LM',

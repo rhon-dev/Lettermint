@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { contrastRatio, meetsAA } from './color';
 import { History } from './history';
 import { PALETTES } from './palettes';
-import { decodeState, encodeState } from './share';
+import { decodeState, encodeState, readShareHash } from './share';
 import { gradientVector, logoSvgString } from './svg';
 import { mulberry32, variationSet } from './variations';
 import { DEFAULTS, validatePartial } from '../store/logo';
@@ -20,6 +20,28 @@ describe('share encoding', () => {
   it('round-trips the full state through the validator', () => {
     const state = { ...DEFAULTS, text: 'Ab', uppercase: false, fill: 'gradient' as const, gradientAngle: 90 };
     expect(validatePartial(decodeState(`#${encodeState(state)}`))).toEqual(state);
+  });
+
+  it('round-trips the brand name and strips tags from shared names', () => {
+    const state = { ...DEFAULTS, brandName: 'Lena & Co' };
+    expect(validatePartial(decodeState(`#${encodeState(state)}`))).toEqual(state);
+    expect(validatePartial(decodeState('n=%3Cb%3EHi%3C%2Fb%3E'))).toEqual({ brandName: 'Hi' });
+  });
+
+  it('never throws on damaged links and flags them when nothing usable is left', () => {
+    for (const hash of ['#%E0%A4%A', '#%%%', '#zz', '#=&=&', '#s=1e999&k=-Infinity&f=__proto__', '#constructor=1', `#${'x'.repeat(5000)}`]) {
+      expect(() => readShareHash(hash)).not.toThrow();
+      expect(readShareHash(hash)).toEqual({ state: {}, damaged: true });
+    }
+  });
+
+  it('keeps the usable part of a partly damaged link', () => {
+    expect(readShareHash('#t=AB&bg=nothex&s=%ZZ')).toEqual({ state: { text: 'AB' }, damaged: false });
+  });
+
+  it('treats an empty hash as no link', () => {
+    expect(readShareHash('')).toEqual({ state: {}, damaged: false });
+    expect(readShareHash('#')).toEqual({ state: {}, damaged: false });
   });
 
   it('drops hostile or invalid values', () => {

@@ -21,7 +21,7 @@ export function BottomSheet({ sheet, label, children }: BottomSheetProps) {
         type="button"
         aria-expanded={expanded}
         aria-label={expanded ? 'Collapse controls' : 'Expand controls'}
-        className="focus-ring flex shrink-0 cursor-grab touch-none justify-center rounded-t-3xl py-3 active:cursor-grabbing"
+        className="focus-ring flex min-h-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-t-3xl active:cursor-grabbing"
         {...sheet.handleProps}
       >
         <span aria-hidden="true" className="h-1.5 w-12 rounded-full bg-stone-300 dark:bg-stone-600" />
