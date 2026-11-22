@@ -10,6 +10,7 @@ import { useBottomSheet } from './hooks/useBottomSheet';
 import { useMediaQuery, useViewportHeight } from './hooks/useMedia';
 import { useShortcuts } from './hooks/useShortcuts';
 import { selectFont } from './lib/glyphs';
+import { DISCLAIMER } from './lib/site';
 import { useLogoStore } from './store/logo';
 import { useUiStore } from './store/ui';
 
@@ -29,7 +30,7 @@ const ExportDialog = lazy(
 
 function Footer() {
   return (
-    <p className="pt-6 text-xs text-stone-600 dark:text-stone-400">
+    <footer className="pt-6 text-xs text-stone-600 dark:text-stone-400">
       All typefaces are licensed under the SIL Open Font License.{' '}
       <a href="/licenses/fonts.md" className="focus-ring rounded underline underline-offset-2">
         Font licenses
@@ -38,7 +39,8 @@ function Footer() {
         Shortcuts: <kbd className="font-mono">R</kbd> shuffle · <kbd className="font-mono">E</kbd> export ·{' '}
         <kbd className="font-mono">⌘/Ctrl Z</kbd> undo
       </span>
-    </p>
+      <span className="mt-1 block">{DISCLAIMER}</span>
+    </footer>
   );
 }
 

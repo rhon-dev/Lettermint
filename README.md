@@ -1,4 +1,4 @@
-# Lettermint
+# Lettermint: free initials logo maker
 
 **Type your initials, get a brand mark and a ready-to-use brand kit. Free, no signup, runs entirely in your browser.**
 
@@ -43,7 +43,17 @@ npm run preview   # serve the production build
 
 Import the repo. Vercel detects Vite: the build command is `npm run build` and the output directory is `dist`. No `vercel.json` is needed, because all state lives in the URL hash and there are no server routes.
 
-Before launch, replace the placeholder domain `https://lettermint.example.com` in `index.html`, `public/robots.txt` and `public/sitemap.xml`.
+#### Site URL
+
+The canonical link, Open Graph and Twitter image URLs, `robots.txt` and `sitemap.xml` all come from one build-time value, `VITE_SITE_URL`. When it is unset, the build uses the default in `src/lib/site.ts` (`https://lettermint-tau.vercel.app`). The value must be a bare origin such as `https://lettermint.vercel.app`, with no path; anything else fails the build. `robots.txt` and `sitemap.xml` are generated into `dist/` by `npm run build`, so `npm run dev` does not serve them.
+
+To set it in Vercel:
+
+1. Open the project in the Vercel dashboard, then **Settings → Environment Variables**.
+2. Add the key `VITE_SITE_URL` with your production origin, for example `https://lettermint.vercel.app`. Tick **Production** (add **Preview** only if previews should point at their own URL).
+3. Save, then redeploy (**Deployments →** latest **→ Redeploy**). The value is read at build time, so existing deployments keep the old URL.
+
+The CLI equivalent is `vercel env add VITE_SITE_URL production`, then `vercel deploy --prod`. Locally, run `VITE_SITE_URL=https://… npm run build`.
 
 ## Project layout
 
@@ -63,3 +73,7 @@ docs/PLAN.md    roadmap and design decisions
 - **Modal dialogs hide everything else from screen readers.** A toast outside a `showModal()` dialog is never announced, so the export dialog has its own live region.
 - **Contrast needs checking in both themes.** The mint primary button and the gradient heading text passed in the design but measured below 4.5:1. Both now use darker stops.
 - **Measure before optimising.** Lighthouse and the network panel showed that eight gallery fonts were competing with the main preview. They now wait until the selected font is ready, and the export code loads only when the dialog opens.
+
+---
+
+Not affiliated with lettermint.co.

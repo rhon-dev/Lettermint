@@ -1,10 +1,25 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { loadEnv, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { renderSiteHtml, robotsTxt, siteUrl, sitemapXml } from './src/lib/site.ts';
 
-export default defineConfig({
+/** Fill %SITE_URL% in index.html and emit robots.txt + sitemap.xml from one value. */
+function siteFiles(url: string): Plugin {
+  return {
+    name: 'lettermint-site-files',
+    transformIndexHtml: { order: 'pre', handler: (html) => renderSiteHtml(html, url) },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(url) });
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(url) });
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
+    siteFiles(siteUrl(loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL)),
     react(),
     tailwindcss(),
     VitePWA({
@@ -36,4 +51,4 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
   },
-});
+}));

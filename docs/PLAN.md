@@ -86,8 +86,9 @@ Dropped from the original Phase 3 list:
 - Performance: export code lazy-loaded; gallery fonts wait for the selected font; logo fonts runtime-cached by
   the service worker instead of precaching all 60
 - Error states: blocked clipboard, export failure, font load failure, unsupported characters, damaged share links
-- SEO: meta, Open Graph and Twitter tags, canonical placeholder, robots.txt, sitemap, icons and OG image generated
-  by the app's own brand-kit export
+- SEO: meta, Open Graph and Twitter tags, canonical link, robots.txt, sitemap, icons and OG image generated
+  by the app's own brand-kit export. The site URL is one build-time value, `VITE_SITE_URL` (default in
+  `src/lib/site.ts`); robots.txt and sitemap.xml are generated from it at build time
 
 ### Phase 6 — Generative / AI (still $0, client-side)
 - "Describe your vibe" keywords that map to font/shape/palette weights (rule-based first)
@@ -110,3 +111,33 @@ Dropped from the original Phase 3 list:
   the same validators. Untrusted input never reaches the renderer.
 - **No new runtime dependencies** unless one replaces a meaningful amount of code. Icons are inline SVG.
 - **Verification:** `npm run test && npm run lint && npm run build` must pass before each phase is marked done.
+
+## 5. Pre-launch checklist (by hand)
+
+Automated checks (`npm run test && npm run lint && npm run build`) do not cover the items below. Check
+them on the production deployment after `VITE_SITE_URL` is set, and tick each one.
+
+- [ ] **Site URL.** `view-source:` of the live page shows the production origin in `canonical`,
+      `og:url`, `og:image` and `twitter:image`. `/robots.txt` and `/sitemap.xml` load and use the same
+      origin.
+- [ ] **Real phone (iOS Safari and Android Chrome).** Type initials, change shape, font and weight, and
+      drag the bottom sheet between its snap points. Nothing scrolls sideways at 360 px. Every button,
+      switch and segment is easy to hit (44 px targets). Safe areas don't cover the top bar or the sheet.
+- [ ] **Desktop Safari.** The preview, gallery and mockups render. Export SVG and PNG, then open both
+      files. Copy SVG works (Safari requires a user gesture for the clipboard).
+- [ ] **Firefox.** Same flow as Safari: render, export SVG/PNG, copy SVG, share link.
+- [ ] **Offline.** Load the site once, use two fonts, then turn on airplane mode and reload. The app
+      opens, both used fonts render, and an unused font shows the "couldn't load" notice instead of
+      failing silently. Export still works offline.
+- [ ] **ZIP download.** Export → Kit → Download. The ZIP opens, and `favicon.ico`, the PNG set, the
+      Apple touch icon, the OG image, `site.webmanifest`, both lockups, `palette.css` and
+      `tailwind.config.js` are present and open correctly.
+- [ ] **Share link.** Copy the link, open it in a private window, and check the same logo appears. A
+      damaged link shows the notice.
+- [ ] **OG preview on the live URL.** Paste the production URL into the Facebook Sharing Debugger,
+      the LinkedIn Post Inspector and an X/Twitter or Slack/Discord message. The title is "Lettermint:
+      free initials logo maker" and the 1200×630 image appears.
+- [ ] **Footer.** "Not affiliated with lettermint.co." is visible in the controls panel on desktop and
+      at the end of the mobile sheet.
+- [ ] **Lighthouse** (mobile and desktop) on the live URL: no regressions in performance or
+      accessibility.
