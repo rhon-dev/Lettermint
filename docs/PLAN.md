@@ -14,8 +14,9 @@ inspiration, and no reason to come back. "Type two letters and pick a circle" is
 4. **Low-risk editing.** Undo/redo, autosave and deep links mean nothing is ever lost.
 
 **New positioning:** *Lettermint — a pocket brand-mark studio.* You type your initials and get a
-mark, its variations, mockups and an export kit. It stays free, needs no signup, runs entirely in
-the browser and works offline.
+mark, its variations, mockups and an export kit. It stays free, needs no signup and runs entirely in
+the browser. After the first visit the app shell works offline; logo fonts are cached the first time
+each one is used, so an unused font is not available offline (see Phase 5).
 
 ## 2. Design system (from `ui-ux-pro-max`, adapted)
 
@@ -25,7 +26,7 @@ kinetic-brutalist style. **Changes for this product:**
 | Skill recommendation | Decision | Reason |
 |---|---|---|
 | Violet `#7C3AED` primary, pink accent | **Mint `#10B981` primary + violet `#8B5CF6` secondary**, used as an "aurora" gradient | The brand is *Lettermint*. Violet stays as the secondary/generation colour. |
-| Fredoka / Nunito via Google Fonts CDN | **Bricolage Grotesque (display) + Inter (UI)**, self-hosted through @fontsource | Both are already bundled. There are no third-party requests, and the PWA keeps working offline. |
+| Fredoka / Nunito via Google Fonts CDN | **Bricolage Grotesque (display) + Inter (UI)**, self-hosted through @fontsource | Both are already bundled. There are no third-party requests, and the UI fonts are precached, so the app shell works offline. |
 | Kinetic brutalism, 0px radius, marquee | **Soft "studio" bento**: layered surfaces, 16–24px radius, subtle glass only on floating bars | An editor needs calm chrome so that the logo is the loudest element on screen. |
 | Dark primary | **Light, Dark and System** themes, designed together | Logo designers need to check their mark on both backgrounds. |
 
@@ -36,7 +37,10 @@ Rules carried over from the skill (these are not optional):
 - Icons are SVG only, never emoji. Each screen has one primary CTA (**Export**).
 - Toasts use `aria-live="polite"`, never steal focus and dismiss themselves after about 3s.
 
-Tokens are defined in `src/index.css` (`--color-ink-*`, `--color-mint-*`, `--aurora`, radii, shadows).
+Tokens are defined in the `@theme` block of `src/index.css`: `--color-mint-*`, `--color-iris-*`, the
+`--font-*` families, easing curves and animations. Neutrals use Tailwind's built-in `stone` scale. The
+aurora is not a token: it is the `body` background wash and the `.text-aurora` utility. Radii and
+shadows use Tailwind's defaults.
 
 ## 3. Phases
 
@@ -53,11 +57,19 @@ Tokens are defined in `src/index.css` (`--color-ink-*`, `--color-mint-*`, `--aur
 | **Autosave + share link** | State is saved to localStorage and mirrored into the URL hash. A copy-link action shares the exact logo |
 | **Preview backdrop** | Checkerboard, light or dark, to test transparency |
 
-### Phase 3 — Craft
-- Outline/stroke and monoline letters, a letter colour gradient, and an inner border ring
+### Phase 3 — Craft *(shipped)*
+- Outline/stroke letters, a letter colour gradient, and an inner border ring (preview and export)
 - More shapes (rounded square with a radius slider, shield, pill, blob with a seed) and "no shape"
-- Per-letter offset/rotation for monogram interlocks
-- Variable-font weight axis (needs WOFF→TTF variable sources)
+- Per-letter rotation, a vertical offset for the second letter, and letter spacing down to −60% for
+  monogram interlocks
+- Font weight: static weights 400–800. A font that lacks the chosen weight falls back to its nearest
+  shipped weight (`nearestWeight`), and the weight control disables weights the font doesn't ship.
+
+Dropped from the original Phase 3 list:
+- **Monoline letters.** True single-stroke letters need centreline fonts, which we don't ship. Outline
+  letters cover the stroke look.
+- **Variable-font weight axis.** It needs WOFF→TTF variable sources. Static weights give the same
+  control without new font assets.
 
 ### Phase 4 — Brand kit *(shipped: Export dialog → Kit)*
 - One-click ZIP: favicon.ico + PNG set (16/32/180/192/512), `site.webmanifest`, social avatar, OG image (1200×630)
