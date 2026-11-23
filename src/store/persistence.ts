@@ -1,5 +1,5 @@
 import { History } from '../lib/history';
-import { encodeState, readShareHash, withV1Composition } from '../lib/share';
+import { encodeState, presentationPayload, readShareHash, withV1Composition } from '../lib/share';
 import { useUiStore } from './ui';
 import { create } from 'zustand';
 import { pickState, sameState, useLogoStore, validatePartial, type LogoState } from './logo';
@@ -29,9 +29,28 @@ function restore(state: LogoState | null): void {
 export const undo = () => restore(history?.undo() ?? null);
 export const redo = () => restore(history?.redo() ?? null);
 
-export function shareUrl(): string {
+/** Everything between begin and end (a drag, a starter, a restore) is one undo step. */
+export function beginGesture(): void {
+  history?.beginGesture();
+}
+
+export function endGesture(): void {
+  history?.endGesture();
+  syncFlags();
+}
+
+/** Apply an untrusted partial as exactly one undo step, never merged with a recent edit. */
+export function applyAsOneStep(partial: Partial<Record<keyof LogoState, unknown>>): void {
+  beginGesture();
+  useLogoStore.getState().apply(partial);
+  endGesture();
+}
+
+/** Edit link (default) or a presentation link that opens on the finished mark. */
+export function shareUrl(kind: 'edit' | 'present' = 'edit'): string {
   const { origin, pathname } = window.location;
-  return `${origin}${pathname}#${encodeState(pickState(useLogoStore.getState()))}`;
+  const state = pickState(useLogoStore.getState());
+  return `${origin}${pathname}#${kind === 'present' ? presentationPayload(state) : encodeState(state)}`;
 }
 
 /**

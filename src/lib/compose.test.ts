@@ -15,7 +15,15 @@ import {
   snapCenter,
 } from './compose';
 import { History } from './history';
-import { decodeState, encodeState, readShareHash, SHARE_VERSION, withV1Composition } from './share';
+import {
+  decodeState,
+  encodeState,
+  isPresentationHash,
+  presentationPayload,
+  readShareHash,
+  SHARE_VERSION,
+  withV1Composition,
+} from './share';
 import { logoSvgString } from './svg';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -243,6 +251,14 @@ describe('share links with composition', () => {
   it('gives an autosave from before letter positions the composition it was drawn with', () => {
     const saved = validatePartial({ ...DEFAULTS, layout: undefined, knockout: undefined, dx1: undefined, text: 'AR', spacing: -20 });
     expect(withV1Composition(saved)).toMatchObject({ text: 'AR', spacing: -20, layout: 'row', knockout: 0, dx1: 0 });
+  });
+
+  it('presentation links are ordinary share links plus p=1', () => {
+    const state: LogoState = { ...DEFAULTS, dx2: 120 };
+    const hash = `#${presentationPayload(state)}`;
+    expect(isPresentationHash(hash)).toBe(true);
+    expect(isPresentationHash(`#${encodeState(state)}`)).toBe(false);
+    expect(readShareHash(hash).state).toEqual(state);
   });
 
   it('drops hostile composition values', () => {

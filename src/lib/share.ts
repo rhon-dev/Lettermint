@@ -75,6 +75,17 @@ export function decodeState(hash: string): Partial<Record<keyof LogoState, unkno
   return out;
 }
 
+/** Presentation links add `p=1` to an ordinary share payload, so every edit link stays valid. */
+export const PRESENT_KEY = 'p';
+
+export function isPresentationHash(hash: string): boolean {
+  return new URLSearchParams(hash.replace(/^#/, '')).get(PRESENT_KEY) === '1';
+}
+
+export function presentationPayload(state: LogoState): string {
+  return `${encodeState(state)}&${PRESENT_KEY}=1`;
+}
+
 /** Give saved or shared state from before version 2 the composition it was drawn with. */
 export function withV1Composition(state: Partial<LogoState>): Partial<LogoState> {
   const out = { ...state };
