@@ -41,7 +41,8 @@ const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n / 10
 
 /** First view of the editor: the initials, three composition starters and letter positioning. */
 export function Compose() {
-  const { state, font, fontReady } = useCurrentMark();
+  const { state, font, font2, fontReady } = useCurrentMark();
+  const second = { font: font2 ?? undefined, scale: state.scale2 / 100 };
   const apply = useLogoStore((s) => s.apply);
   const selected = useUiStore((s) => s.selected);
   const select = useUiStore((s) => s.select);
@@ -50,7 +51,7 @@ export function Compose() {
   const pair = count === 2;
   const sel = count === 1 ? 0 : selected;
   const labels = letterLabels(text);
-  const active = pair && fontReady && font ? activeStarter(state, font, text) : null;
+  const active = pair && fontReady && font ? activeStarter(state, font, text, second) : null;
   const [kx, ky] = offsetKeys(sel);
   const moved = state[kx] !== 0 || state[ky] !== 0;
 
@@ -95,7 +96,7 @@ export function Compose() {
                 aria-pressed={active === c.id}
                 disabled={!fontReady || !font}
                 title={!fontReady ? 'Waiting for the font…' : undefined}
-                onClick={() => font && applyAsOneStep(composeStarter(c.id, font, text))}
+                onClick={() => font && applyAsOneStep(composeStarter(c.id, font, text, second))}
                 className={`btn focus-ring min-h-16 flex-col gap-1 rounded-xl px-2 text-xs ring-1 transition-[background-color,box-shadow] duration-150 ${
                   active === c.id
                     ? 'bg-mint-50 text-mint-800 ring-2 ring-mint-600 hover:!bg-mint-50 dark:bg-mint-900/40 dark:text-mint-200 dark:ring-mint-400 dark:hover:!bg-mint-900/40'

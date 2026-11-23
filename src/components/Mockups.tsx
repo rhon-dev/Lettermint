@@ -8,11 +8,11 @@ export function Mockups() {
   const live = useCurrentMark();
   // Deferred like the gallery: the artboard updates first during a drag.
   const state = useDeferredValue(live.state);
-  const font = live.font;
-  const geo = useMemo(() => buildLogo(state, font), [state, font]);
+  const { font, font2 } = live;
+  const geo = useMemo(() => buildLogo(state, font, font2), [state, font, font2]);
   // App icons are masked by the OS, so they get the full-bleed square version.
   const iconState = useMemo(() => ({ ...state, shape: 'square' as const }), [state]);
-  const iconGeo = useMemo(() => buildLogo(iconState, font), [iconState, font]);
+  const iconGeo = useMemo(() => buildLogo(iconState, font, font2), [iconState, font, font2]);
   const mark = (className: string) => <LogoMark state={state} font={font} geometry={geo} className={className} />;
 
   return (

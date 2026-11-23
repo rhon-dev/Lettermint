@@ -9,12 +9,14 @@ function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
 }
 
-/** ⌘/Ctrl+Z undo, ⇧⌘Z / Ctrl+Y redo, R shuffle, E export. */
+/** ⌘/Ctrl+Z undo, ⇧⌘Z / Ctrl+Y redo, E download (editor only). */
 export function useShortcuts(): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
+      // Undo and download act on the mark being edited, so they only apply in the editor.
+      if (useUiStore.getState().view !== 'editor') return;
       if (mod && key === 'z' && !isTyping(e.target)) {
         e.preventDefault();
         if (e.shiftKey) redo();
@@ -27,11 +29,8 @@ export function useShortcuts(): void {
         return;
       }
       const ui = useUiStore.getState();
-      if (mod || e.altKey || isTyping(e.target) || ui.exportOpen || ui.presenting) return;
-      if (key === 'r') {
-        e.preventDefault();
-        useUiStore.getState().shuffle();
-      } else if (key === 'e') {
+      if (mod || e.altKey || isTyping(e.target) || ui.exportOpen || ui.presenting || ui.view !== 'editor') return;
+      if (key === 'e') {
         e.preventDefault();
         useUiStore.getState().setExportOpen(true);
       }

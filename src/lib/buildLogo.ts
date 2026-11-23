@@ -51,6 +51,8 @@ export interface LogoInput {
   dy2?: number;
   /** Gap cut into the first letter around the second, ‰ of the canvas. */
   knockout?: number;
+  /** Second letter size relative to the first, %. */
+  scale2?: number;
 }
 
 /** One drawn character: its path and its own ink box in canvas coordinates. */
@@ -129,6 +131,10 @@ export interface LetterPlacement {
   shiftEm: number;
   rotate: [number, number];
   layout?: 'row' | 'stack';
+  /** Typeface of the second letter (default: the first font), normalised to the first font's em. */
+  font2?: GlyphFont;
+  /** Second letter size relative to the first (1 = same). */
+  scale2?: number;
 }
 
 const center = (b: Box) => [(b.x1 + b.x2) / 2, (b.y1 + b.y2) / 2] as const;
@@ -139,9 +145,15 @@ const center = (b: Box) => [(b.x1 + b.x2) / 2, (b.y1 + b.y2) / 2] as const;
  */
 export function layoutLetters(font: GlyphFont, text: string, spacingEm: number, place?: LetterPlacement): GlyphCommand[][] {
   const upm = font.unitsPerEm;
-  const glyphs = Array.from(text, (c) => font.charToGlyph(c));
+  const fonts = [font, place?.font2 ?? font];
+  // Font size per letter in the first font's units: getPath scales each font's own em to it.
+  const sizes = [upm, upm * (place?.scale2 ?? 1)];
+  // Only the second character of a pair has its own face; longer text (lockup names) uses the first.
+  const slot = (i: number) => (i === 1 ? 1 : 0);
+  const glyphs = Array.from(text, (c, i) => fonts[slot(i)]!.charToGlyph(c));
+  const outline = (i: number, x: number) => glyphs[i]!.getPath(x, 0, sizes[slot(i)]).commands as GlyphCommand[];
   if (place?.layout === 'stack' && glyphs.length === 2) {
-    const [top, bottom] = glyphs.map((g, i) => placeLetter(g.getPath(0, 0, upm).commands as GlyphCommand[], place.rotate[i] ?? 0, 0));
+    const [top, bottom] = [0, 1].map((i) => placeLetter(outline(i, 0), place.rotate[i] ?? 0, 0));
     const a = commandsBox(top!);
     const b = commandsBox(bottom!);
     if (a && b) {
@@ -152,13 +164,15 @@ export function layoutLetters(font: GlyphFont, text: string, spacingEm: number, 
   }
   const out: GlyphCommand[][] = [];
   let x = 0;
+  const sameFace = fonts[0] === fonts[1] && sizes[0] === sizes[1];
   glyphs.forEach((glyph, i) => {
-    let cmds = glyph.getPath(x, 0, upm).commands as GlyphCommand[];
+    let cmds = outline(i, x);
     if (place) cmds = placeLetter(cmds, place.rotate[i] ?? 0, i === 1 ? -place.shiftEm * upm : 0);
     out.push(cmds);
-    x += glyph.advanceWidth ?? 0;
+    x += ((glyph.advanceWidth ?? 0) * sizes[slot(i)]!) / fonts[slot(i)]!.unitsPerEm;
     const next = glyphs[i + 1];
-    if (next) x += font.getKerningValue(glyph, next) + spacingEm * upm;
+    // Kerning pairs only exist within one face at one size.
+    if (next) x += (sameFace ? font.getKerningValue(glyph, next) : 0) + spacingEm * upm;
   });
   return out;
 }
@@ -355,7 +369,7 @@ export function buildGlyphs(
 }
 
 /** Pure geometry for the whole logo. React components only render the result. */
-export function buildLogo(state: LogoInput, font: GlyphFont | null): LogoGeometry {
+export function buildLogo(state: LogoInput, font: GlyphFont | null, font2: GlyphFont | null = font): LogoGeometry {
   const { size, shape } = state;
   const text = displayText(state.text, state.uppercase);
   const placeholder = text.length === 0;
@@ -371,7 +385,13 @@ export function buildLogo(state: LogoInput, font: GlyphFont | null): LogoGeometr
         scale: state.scale,
         spacingEm: pair ? state.spacing / 100 : 0,
         place: pair
-          ? { shiftEm: (state.shift ?? 0) / 100, rotate: [state.rotate1 ?? 0, state.rotate2 ?? 0], layout: state.layout }
+          ? {
+              shiftEm: (state.shift ?? 0) / 100,
+              rotate: [state.rotate1 ?? 0, state.rotate2 ?? 0],
+              layout: state.layout,
+              font2: font2 ?? font,
+              scale2: (state.scale2 ?? 100) / 100,
+            }
           : undefined,
         offsets: placeholder
           ? undefined

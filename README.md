@@ -28,7 +28,8 @@ Same viewport (1440 × 900, dark theme) and the same initials, **AR**:
 - **Compare.** Pin a version, keep editing, and flip between Pinned and Current at the same size. *Restore pinned* is a single undo step.
 - **Presentation links.** A share link with a portfolio masthead, the finished mark and its favicon. *Remix this mark* opens the same composition in the editor.
 - **Live editor.** One or two characters, 12 self-hosted typefaces in up to five weights, eight shapes (circle to seeded blob) or none, solid or gradient fills, outline letters, inner ring, letter spacing, and per-letter rotation and shift for monograms.
-- **Variations.** Eight alternatives built from your own initials. Click one to apply it, or press `R` to shuffle.
+- **Styles gallery.** Type your initials once and browse ten named designs drawn from them (an interlocking serif, a stacked column, an open pair, a ringed seal, mixed-typeface pairs and more), filtered by Serif, Sans, Framed or Mixed type. Each tile is the real renderer, and the editor opens on exactly the tile you picked. *Styles* takes you back with your initials, filter and scroll position intact.
+- **Per-letter type.** Each letter of a pair can have its own typeface and weight, the second letter its own size and colour, and either letter can sit in front. Share links from before this change open with one typeface, as they were drawn.
 - **Mockups.** The mark as a browser tab favicon, iOS app icon, social avatar, and on light and dark backgrounds.
 - **Contrast check.** A WCAG ratio for letters against the shape, including the weakest pair of gradient stops.
 - **Export.** SVG, or PNG from 64 to 2048 px. You can also copy the SVG markup.

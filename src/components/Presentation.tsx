@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { getFontDef } from '../fonts/registry';
 import { buildLogo } from '../lib/buildLogo';
 import { describeLogo } from '../lib/describe';
 import { encodeState } from '../lib/share';
@@ -12,9 +13,9 @@ import { LogoMark } from './LogoMark';
 
 /** Presentation link view: the finished mark with a small portfolio masthead and one way in to edit it. */
 export function Presentation() {
-  const { state, font, fontReady, fontFailed, wantedFamily } = useCurrentMark();
+  const { state, font, font2, fontReady, fontFailed, wantedFamily } = useCurrentMark();
   const setPresenting = useUiStore((s) => s.setPresenting);
-  const geo = useMemo(() => buildLogo(state, font), [state, font]);
+  const geo = useMemo(() => buildLogo(state, font, font2), [state, font, font2]);
   const initials = displayText(state.text, state.uppercase);
   const name = state.brandName.trim();
   const title = describeLogo(state, wantedFamily);
@@ -23,6 +24,7 @@ export function Presentation() {
     // Same composition, now as an ordinary edit link.
     window.history.replaceState(null, '', `#${encodeState(pickState(useLogoStore.getState()))}`);
     setPresenting(false);
+    useUiStore.setState({ view: 'editor' });
   };
 
   return (
@@ -33,6 +35,9 @@ export function Presentation() {
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-6xl">{name || initials || 'Untitled'}</h1>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
             {initials ? `“${initials}” ` : ''}set in {wantedFamily} {state.weight}
+            {Array.from(initials).length === 2 && (state.fontId2 !== state.fontId || state.weight2 !== state.weight)
+              ? ` and ${getFontDef(state.fontId2).family} ${state.weight2}`
+              : ''}
             {state.layout === 'stack' ? ', stacked' : state.knockout > 0 ? ', overlapping' : ''}.
           </p>
         </div>

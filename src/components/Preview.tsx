@@ -83,20 +83,25 @@ function CompareControls() {
  * and empty states, the comparison toggle, and the real 16 px favicon underneath.
  */
 export function Preview({ className = '', compact = false, showSize = true }: { className?: string; compact?: boolean; showSize?: boolean }) {
-  const { state, font, fontReady, fontFailed, wantedFamily } = useCurrentMark();
+  const { state, font, font2, fontReady, fontFailed, wantedFamily } = useCurrentMark();
   const backdrop = useUiStore((s) => s.backdrop);
   const setBackdrop = useUiStore((s) => s.setBackdrop);
   const pinned = useUiStore((s) => s.pinned);
   const showPinned = useUiStore((s) => s.showPinned && s.pinned !== null);
   const pinnedFont = useFontStore((s) => (pinned ? (s.fonts[fontKey(pinned.fontId, pinned.weight)] ?? null) : null));
+  const pinnedFont2 = useFontStore((s) => (pinned ? (s.fonts[fontKey(pinned.fontId2, pinned.weight2)] ?? null) : null));
 
   useEffect(() => {
-    if (pinned) void requestFont(pinned.fontId, pinned.weight);
+    if (pinned) {
+      void requestFont(pinned.fontId, pinned.weight);
+      void requestFont(pinned.fontId2, pinned.weight2);
+    }
   }, [pinned]);
 
   const shown = showPinned && pinned ? pinned : state;
   const shownFont = showPinned ? pinnedFont : font;
-  const geo = useMemo(() => buildLogo(shown, shownFont), [shown, shownFont]);
+  const shownFont2 = showPinned ? pinnedFont2 : font2;
+  const geo = useMemo(() => buildLogo(shown, shownFont, shownFont2), [shown, shownFont, shownFont2]);
   const editing = !showPinned && fontReady && !geo.placeholder;
   const firstLoad = font === null && !fontFailed;
 
@@ -141,7 +146,10 @@ export function Preview({ className = '', compact = false, showSize = true }: { 
             {fontFailed ? (
               <>
                 {wantedFamily} couldn't load.
-                <button type="button" className="focus-ring rounded font-semibold underline" onClick={() => void selectFont(state.fontId, state.weight)}>
+                <button type="button" className="focus-ring rounded font-semibold underline" onClick={() => {
+                    void selectFont(state.fontId, state.weight);
+                    void selectFont(state.fontId2, state.weight2, 1);
+                  }}>
                   Retry
                 </button>
               </>

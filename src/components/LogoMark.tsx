@@ -10,6 +10,8 @@ export type MarkState = Omit<LogoState, 'fontId' | 'weight'>;
 interface LogoMarkProps {
   state: MarkState;
   font: Font | null;
+  /** The second letter's typeface (defaults to `font`). */
+  font2?: Font | null;
   className?: string;
   /** Accessible name; when omitted the mark is decorative. */
   label?: string;
@@ -21,9 +23,9 @@ interface LogoMarkProps {
  * The single renderer for a logo (artboard, gallery, mockups). Its markup comes from the same
  * `logoSvgBody` serializer the SVG, PNG and kit exports use, so what you see is what you export.
  */
-export function LogoMark({ state, font, className, label, geometry }: LogoMarkProps) {
+export function LogoMark({ state, font, font2 = font, className, label, geometry }: LogoMarkProps) {
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const built = useMemo(() => geometry ?? buildLogo(state, font), [geometry, state, font]);
+  const built = useMemo(() => geometry ?? buildLogo(state, font, font2), [geometry, state, font, font2]);
   // Inputs are validated (hex colors, numeric paths), so the serialized markup is safe to inject.
   const body = useMemo(() => ({ __html: logoSvgBody(state, built, `m${gid}`) }), [state, built, gid]);
 

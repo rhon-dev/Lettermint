@@ -10,6 +10,12 @@ const KEYS = {
   ring: 'rg',
   fontId: 'f',
   weight: 'w',
+  fontId2: 'f2',
+  weight2: 'w2',
+  scale2: 'k2',
+  twoTone: 'tt',
+  secondColor: 'c2',
+  firstOnTop: 'ft',
   bgColor: 'bg',
   bgColor2: 'bg2',
   fill: 'fl',
@@ -34,10 +40,10 @@ const KEYS = {
   brandName: 'n',
 } as const satisfies Record<keyof LogoState, string>;
 
-const COLORS = new Set<keyof LogoState>(['bgColor', 'bgColor2', 'fgColor', 'fgColor2']);
+const COLORS = new Set<keyof LogoState>(['bgColor', 'bgColor2', 'fgColor', 'fgColor2', 'secondColor']);
 
-/** Links written by this version carry `v=2`; links without it predate letter positions. */
-export const SHARE_VERSION = 2;
+/** Version 3 added per-letter typefaces and colors; links without `v` predate letter positions. */
+export const SHARE_VERSION = 3;
 /**
  * Fields added in version 2, with the values that reproduce how older links rendered.
  * A link that lacks them gets these, never the autosaved or default values.
@@ -94,6 +100,18 @@ export function withV1Composition(state: Partial<LogoState>): Partial<LogoState>
 }
 
 /**
+ * Give saved or shared state from before version 3 one typeface, one letter color and the
+ * second letter in front, which is how it was drawn. Never the autosaved or default values.
+ */
+export function withLetterDefaults(state: Partial<LogoState>): Partial<LogoState> {
+  if ('fontId2' in state) return state;
+  const out: Partial<LogoState> = { scale2: 100, twoTone: false, firstOnTop: false, ...state };
+  if (state.fontId) out.fontId2 = state.fontId;
+  if (state.weight) out.weight2 = state.weight;
+  return out;
+}
+
+/**
  * Read a share link. `damaged` means the hash had content but nothing in it was usable,
  * so the caller keeps the current (autosaved or default) logo and can tell the user.
  */
@@ -102,5 +120,5 @@ export function readShareHash(hash: string): { state: Partial<LogoState>; damage
   const state = validatePartial(decodeState(hash));
   if (Object.keys(state).length === 0) return { state, damaged: true };
   // A link describes one whole composition: missing position fields mean "not moved".
-  return { state: withV1Composition(state), damaged: false };
+  return { state: withLetterDefaults(withV1Composition(state)), damaged: false };
 }

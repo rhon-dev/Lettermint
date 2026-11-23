@@ -91,15 +91,23 @@ export function letterLabels(text: string): string[] {
   return chars.map((c, i) => `${i === 0 ? 'First' : 'Second'} ${c}`);
 }
 
+/** The second letter's own typeface and relative size (1 = same as the first). */
+export interface SecondLetter {
+  font?: GlyphFont;
+  scale?: number;
+}
+
 /**
  * A starter composition from the measured ink of the two letters (not their advance widths),
  * so narrow pairs (II), wide pairs (MW) and mixed pairs (AR) get the same visual relationship.
  * Positions are reset; nothing outside COMPOSITION_KEYS changes.
  */
-export function composeStarter(kind: Composition, font: GlyphFont, text: string): CompositionPatch {
+export function composeStarter(kind: Composition, font: GlyphFont, text: string, second?: SecondLetter): CompositionPatch {
   const upm = font.unitsPerEm;
   const reset = { knockout: 0, dx1: 0, dy1: 0, dx2: 0, dy2: 0 };
-  const [a, b] = layoutLetters(font, text, 0, { shiftEm: 0, rotate: [0, 0] }).map((c) => commandsBox(c));
+  const [a, b] = layoutLetters(font, text, 0, { shiftEm: 0, rotate: [0, 0], font2: second?.font, scale2: second?.scale }).map((c) =>
+    commandsBox(c),
+  );
   if (!a || !b) return { layout: 'row', spacing: 0, shift: 0, ...reset };
   const height = Math.max(a.y2 - a.y1, b.y2 - b.y1);
   const em = (units: number) => (units / upm) * 100;
@@ -120,9 +128,9 @@ export function composeStarter(kind: Composition, font: GlyphFont, text: string)
 }
 
 /** Which starter the state currently matches exactly, if any. */
-export function activeStarter(state: LogoState, font: GlyphFont, text: string): Composition | null {
+export function activeStarter(state: LogoState, font: GlyphFont, text: string, second?: SecondLetter): Composition | null {
   for (const { id } of COMPOSITIONS) {
-    const p = composeStarter(id, font, text);
+    const p = composeStarter(id, font, text, second);
     if (COMPOSITION_KEYS.every((k) => p[k] === state[k])) return id;
   }
   return null;

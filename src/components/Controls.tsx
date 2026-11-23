@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { getFontDef, WEIGHT_LABELS, type Weight } from '../fonts/registry';
+import { availableWeights, getFontDef, nearestWeight, WEIGHTS, WEIGHT_LABELS, type FontId, type Weight } from '../fonts/registry';
 import { meetsAA } from '../lib/color';
 import { craftControls, nextBlobSeed, worstContrast } from '../lib/controls';
 import { SHAPE_LABELS } from '../lib/shapes';
@@ -21,7 +21,7 @@ function Section({ title, summary, action, children }: { title: string; summary?
     <details className="group border-b border-stone-200/80 last:border-b-0 dark:border-stone-800">
       <summary className="focus-ring flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-lg py-2 [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 items-baseline gap-2">
-          <h2 className="text-xs font-semibold tracking-widest text-stone-700 uppercase dark:text-stone-300">{title}</h2>
+          <h3 className="text-xs font-semibold tracking-widest text-stone-700 uppercase dark:text-stone-300">{title}</h3>
           {summary && <span className="truncate text-xs text-stone-600 dark:text-stone-400">{summary}</span>}
         </span>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="shrink-0 text-stone-500 transition-transform duration-150 group-open:rotate-180">
@@ -103,18 +103,93 @@ const dot = (gradient: boolean) => (
 
 const signed = (unit: string) => (n: number) => `${n > 0 ? '+' : ''}${n}${unit}`;
 
-export function Controls() {
+export type ControlGroup = 'typography' | 'arrangement' | 'color';
+
+type Target = 'both' | 'first' | 'second';
+
+/** Typeface and weight, for both letters or for one letter of a pair. */
+function TypefaceControls() {
+  const state = useLogoStore(useShallow(pickState));
+  const apply = useLogoStore((s) => s.apply);
+  const pair = craftControls(state).pair;
+  const mixed = state.fontId !== state.fontId2 || state.weight !== state.weight2;
+  const [target, setTarget] = useState<Target>(mixed ? 'first' : 'both');
+  const t: Target = pair ? target : 'both';
+  const second = t === 'second';
+  const fontId = second ? state.fontId2 : state.fontId;
+  const weight = second ? state.weight2 : state.weight;
+  const shipped = availableWeights(fontId);
+  const drawn = nearestWeight(fontId, weight);
+  const setFont = (id: FontId) => apply(t === 'both' ? { fontId: id, fontId2: id, weight2: state.weight } : second ? { fontId2: id } : { fontId: id });
+  const setWeight = (w: Weight) => apply(t === 'both' ? { weight: w, weight2: w } : second ? { weight2: w } : { weight: w });
+  const label = (i: 0 | 1) => (t === 'both' ? 'Both letters' : `${i === 0 ? 'First' : 'Second'} letter`);
+
+  return (
+    <>
+      {pair && (
+        <Segmented<Target>
+          legend="Apply typeface to"
+          name="type-target"
+          showLegend
+          value={t}
+          onChange={setTarget}
+          options={[
+            { value: 'both', label: 'Both' },
+            { value: 'first', label: 'First' },
+            { value: 'second', label: 'Second' },
+          ]}
+        />
+      )}
+      <FontPicker legend={`Typeface: ${label(second ? 1 : 0)}`} value={fontId} weight={weight} onSelect={setFont} />
+      <Segmented<Weight>
+        legend="Weight"
+        name="weight"
+        showLegend
+        value={weight}
+        onChange={setWeight}
+        options={WEIGHTS.map((value) => ({
+          value,
+          label: <span className="font-mono tabular-nums">{value}</span>,
+          disabled: !shipped.includes(value),
+          title: shipped.includes(value) ? WEIGHT_LABELS[value] : `${WEIGHT_LABELS[value]}: not available in this typeface`,
+        }))}
+      />
+      {drawn !== weight && (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-400">
+          This typeface has no {weight} weight. Showing {drawn} instead.
+        </p>
+      )}
+    </>
+  );
+}
+
+export function GroupHeading({ children }: { children: ReactNode }) {
+  return <h2 className="pt-2 pb-1 font-display text-lg font-semibold tracking-tight">{children}</h2>;
+}
+
+export function ResetAll() {
+  const reset = useLogoStore((s) => s.reset);
+  const notify = useUiStore((s) => s.notify);
+  return (
+    <button
+      type="button"
+      className="btn focus-ring -ml-2 text-xs text-stone-600 dark:text-stone-400"
+      onClick={() => {
+        reset();
+        notify('Reset to the starting mark. Undo with ⌘/Ctrl+Z');
+      }}
+    >
+      <Icon name="reset" size={14} /> Reset all
+    </button>
+  );
+}
+
+/** Inspector sections for one group: typography, arrangement or color. */
+export function Controls({ group }: { group: ControlGroup }) {
   const state = useLogoStore(useShallow(pickState));
   const apply = useLogoStore((s) => s.apply);
   const c = craftControls(state);
-  const bgColor = useLogoStore((s) => s.bgColor);
-  const bgColor2 = useLogoStore((s) => s.bgColor2);
-  const fill = useLogoStore((s) => s.fill);
-  const gradientAngle = useLogoStore((s) => s.gradientAngle);
-  const fgColor = useLogoStore((s) => s.fgColor);
-  const size = useLogoStore((s) => s.size);
-  const scale = useLogoStore((s) => s.scale);
-  const spacing = useLogoStore((s) => s.spacing);
+  const { bgColor, bgColor2, fill, gradientAngle, fgColor, size, scale, spacing } = state;
   const setBgColor = useLogoStore((s) => s.setBgColor);
   const setBgColor2 = useLogoStore((s) => s.setBgColor2);
   const setGradientAngle = useLogoStore((s) => s.setGradientAngle);
@@ -123,24 +198,201 @@ export function Controls() {
   const setScale = useLogoStore((s) => s.setScale);
   const setSpacing = useLogoStore((s) => s.setSpacing);
   const swapColors = useLogoStore((s) => s.swapColors);
-  const reset = useLogoStore((s) => s.reset);
-  const notify = useUiStore((s) => s.notify);
+  const mixed = c.pair && (state.fontId !== state.fontId2 || state.weight !== state.weight2);
+
+  if (group === 'typography') {
+    return (
+      <div>
+        <Section
+          title="Typeface"
+          summary={`${getFontDef(state.fontId).family} ${state.weight}${mixed ? ` + ${getFontDef(state.fontId2).family} ${state.weight2}` : ''}`}
+        >
+          <TypefaceControls />
+        </Section>
+        <Section title="Letters" summary={state.letterStyle === 'outline' ? 'Outline' : 'Filled'}>
+          <Segmented<LetterStyle>
+            legend="Letter style"
+            name="letter-style"
+            value={state.letterStyle}
+            onChange={(letterStyle) => apply({ letterStyle })}
+            options={[
+              { value: 'fill', label: 'Filled' },
+              { value: 'outline', label: 'Outline' },
+            ]}
+          />
+          {c.showStroke && (
+            <Slider
+              label="Outline width"
+              value={state.stroke}
+              {...LIMITS.stroke}
+              onChange={(stroke) => apply({ stroke })}
+              format={(n) => `${(n / 10).toFixed(1)}%`}
+              hint="Percent of the canvas. Letters shrink if needed so the outline stays inside the shape."
+            />
+          )}
+        </Section>
+      </div>
+    );
+  }
+
+  if (group === 'arrangement') {
+    return (
+      <div>
+        {c.pair && (
+          <Section
+            title="Monogram"
+            summary={state.layout === 'stack' ? 'Stacked' : 'In a row'}
+            action={
+              state.rotate1 !== 0 || state.rotate2 !== 0 ? (
+                <button
+                  type="button"
+                  className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
+                  onClick={() => apply({ rotate1: 0, rotate2: 0 })}
+                >
+                  <Icon name="reset" size={14} /> Straighten
+                </button>
+              ) : undefined
+            }
+          >
+            <Slider
+              label="Letter spacing"
+              value={spacing}
+              {...LIMITS.spacing}
+              onChange={setSpacing}
+              format={signed('%')}
+              hint={state.layout === 'stack' ? 'Gap between the stacked letters.' : 'Space between the two characters. Negative values overlap them.'}
+            />
+            <Slider
+              label="Second letter size"
+              value={state.scale2}
+              {...LIMITS.scale2}
+              onChange={(scale2) => apply({ scale2 })}
+              format={(n) => `${n}%`}
+              hint="Relative to the first letter."
+            />
+            <Segmented<'second' | 'first'>
+              legend="Letter in front"
+              name="layer"
+              showLegend
+              value={state.firstOnTop ? 'first' : 'second'}
+              onChange={(v) => apply({ firstOnTop: v === 'first' })}
+              options={[
+                { value: 'first', label: 'First' },
+                { value: 'second', label: 'Second' },
+              ]}
+            />
+            <Slider
+              label="Overlap gap"
+              value={state.knockout}
+              {...LIMITS.knockout}
+              onChange={(knockout) => apply({ knockout })}
+              format={(n) => (n === 0 ? 'Off' : `${(n / 10).toFixed(1)}%`)}
+              hint="Cuts a gap into the back letter where the front one crosses it, so overlapping letters stay readable."
+            />
+            <Slider
+              label="First letter rotation"
+              value={state.rotate1}
+              {...LIMITS.rotate1}
+              onChange={(rotate1) => apply({ rotate1 })}
+              format={signed('°')}
+            />
+            <Slider
+              label="Second letter rotation"
+              value={state.rotate2}
+              {...LIMITS.rotate2}
+              onChange={(rotate2) => apply({ rotate2 })}
+              format={signed('°')}
+            />
+            <Slider
+              label="Second letter shift"
+              value={state.shift}
+              {...LIMITS.shift}
+              onChange={(shift) => apply({ shift })}
+              format={signed('%')}
+              hint="Moves the second letter up (+) or down (−) before fitting, in percent of the font size."
+            />
+          </Section>
+        )}
+        <Section title="Size" summary={`${scale}% · ${size} px`}>
+          <Slider
+            label="Letter scale"
+            value={scale}
+            {...LIMITS.scale}
+            onChange={setScale}
+            format={(n) => `${n}%`}
+            hint="Height of the letters relative to the canvas. Capped so letters never leave the shape."
+          />
+          <Slider label="Canvas size" value={size} {...LIMITS.size} onChange={setSize} format={(n) => `${n} px`} />
+        </Section>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 pb-1">
-        <h2 className="text-sm font-semibold">Details</h2>
-        <button
-          type="button"
-          className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
-          onClick={() => {
-            reset();
-            notify('Reset to the starting mark. Undo with ⌘/Ctrl+Z');
-          }}
-        >
-          <Icon name="reset" size={14} /> Reset all
-        </button>
-      </div>
+      <Section
+        title="Colors"
+        action={
+          <button
+            type="button"
+            className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
+            onClick={swapColors}
+            aria-label="Swap background and letter colors"
+          >
+            <Icon name="swap" size={14} /> Swap
+          </button>
+        }
+      >
+        <PalettePicker />
+        <FillToggle />
+        <div className="grid grid-cols-2 gap-4">
+          <ColorField id="bg" label={fill === 'gradient' ? 'Start' : 'Background'} value={bgColor} onChange={setBgColor} />
+          {fill === 'gradient' ? (
+            <ColorField id="bg2" label="End" value={bgColor2} onChange={setBgColor2} />
+          ) : (
+            <ColorField id="fg" label={c.showLetterEnd ? 'Letters start' : 'Letters'} value={fgColor} onChange={setFgColor} />
+          )}
+        </div>
+        {fill === 'gradient' && (
+          <ColorField id="fg" label={c.showLetterEnd ? 'Letters start' : 'Letters'} value={fgColor} onChange={setFgColor} />
+        )}
+        <Segmented<Fill>
+          legend="Letter fill"
+          name="letter-fill"
+          value={state.fgFill}
+          onChange={(fgFill) => apply({ fgFill })}
+          options={[
+            { value: 'solid', label: <>{dot(false)} Solid</> },
+            { value: 'gradient', label: <>{dot(true)} Gradient</> },
+          ]}
+        />
+        {c.showLetterEnd && (
+          <ColorField id="fg2" label="Letter gradient end" value={state.fgColor2} onChange={(fgColor2) => apply({ fgColor2 })} />
+        )}
+        {(fill === 'gradient' || c.showLetterEnd) && (
+          <Slider
+            label="Gradient angle"
+            value={gradientAngle}
+            {...LIMITS.gradientAngle}
+            onChange={setGradientAngle}
+            format={(n) => `${n}°`}
+            hint={fill === 'gradient' && c.showLetterEnd ? 'Shared by the background and letter gradients.' : undefined}
+          />
+        )}
+        {c.pair && (
+          <>
+            <Switch
+              label="Second letter in its own color"
+              checked={state.twoTone}
+              onChange={(twoTone) => apply({ twoTone })}
+            />
+            {state.twoTone && (
+              <ColorField id="c2" label="Second letter" value={state.secondColor} onChange={(secondColor) => apply({ secondColor })} />
+            )}
+          </>
+        )}
+        <ContrastBadge />
+      </Section>
       <Section title="Shape" summary={SHAPE_LABELS[state.shape]}>
         <ShapePicker />
         {c.showRadius && (
@@ -175,167 +427,6 @@ export function Controls() {
           hint={c.ringAvailable ? 'A border inside the shape, in the letter color.' : 'Needs a background shape.'}
         />
       </Section>
-      <Section title="Typeface" summary={`${getFontDef(state.fontId).family} · ${state.weight}`}>
-        <FontPicker />
-        <Segmented<Weight>
-          legend="Weight"
-          name="weight"
-          showLegend
-          value={state.weight}
-          onChange={(weight) => apply({ weight })}
-          options={c.weights.map((w) => ({
-            value: w.value,
-            label: <span className="font-mono tabular-nums">{w.value}</span>,
-            disabled: !w.available,
-            title: w.available ? WEIGHT_LABELS[w.value] : `${WEIGHT_LABELS[w.value]}: not available in this typeface`,
-          }))}
-        />
-        {c.weightFallback !== null && (
-          <p role="status" className="text-xs text-amber-700 dark:text-amber-400">
-            This typeface has no {state.weight} weight. Showing {c.weightFallback} instead.
-          </p>
-        )}
-      </Section>
-      <Section title="Letters">
-        <Segmented<LetterStyle>
-          legend="Letter style"
-          name="letter-style"
-          value={state.letterStyle}
-          onChange={(letterStyle) => apply({ letterStyle })}
-          options={[
-            { value: 'fill', label: 'Filled' },
-            { value: 'outline', label: 'Outline' },
-          ]}
-        />
-        {c.showStroke && (
-          <Slider
-            label="Outline width"
-            value={state.stroke}
-            {...LIMITS.stroke}
-            onChange={(stroke) => apply({ stroke })}
-            format={(n) => `${(n / 10).toFixed(1)}%`}
-            hint="Percent of the canvas. Letters shrink if needed so the outline stays inside the shape."
-          />
-        )}
-        <Segmented<Fill>
-          legend="Letter fill"
-          name="letter-fill"
-          value={state.fgFill}
-          onChange={(fgFill) => apply({ fgFill })}
-          options={[
-            { value: 'solid', label: <>{dot(false)} Solid</> },
-            { value: 'gradient', label: <>{dot(true)} Gradient</> },
-          ]}
-        />
-        {c.showLetterEnd && (
-          <ColorField id="fg2" label="Letter gradient end" value={state.fgColor2} onChange={(fgColor2) => apply({ fgColor2 })} />
-        )}
-      </Section>
-      <Section
-        title="Colors"
-        action={
-          <button
-            type="button"
-            className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
-            onClick={swapColors}
-            aria-label="Swap background and letter colors"
-          >
-            <Icon name="swap" size={14} /> Swap
-          </button>
-        }
-      >
-        <PalettePicker />
-        <FillToggle />
-        <div className="grid grid-cols-2 gap-4">
-          <ColorField id="bg" label={fill === 'gradient' ? 'Start' : 'Background'} value={bgColor} onChange={setBgColor} />
-          {fill === 'gradient' ? (
-            <ColorField id="bg2" label="End" value={bgColor2} onChange={setBgColor2} />
-          ) : (
-            <ColorField id="fg" label={c.showLetterEnd ? 'Letters start' : 'Letters'} value={fgColor} onChange={setFgColor} />
-          )}
-        </div>
-        {fill === 'gradient' && (
-          <ColorField id="fg" label={c.showLetterEnd ? 'Letters start' : 'Letters'} value={fgColor} onChange={setFgColor} />
-        )}
-        {(fill === 'gradient' || c.showLetterEnd) && (
-          <Slider
-            label="Gradient angle"
-            value={gradientAngle}
-            {...LIMITS.gradientAngle}
-            onChange={setGradientAngle}
-            format={(n) => `${n}°`}
-            hint={fill === 'gradient' && c.showLetterEnd ? 'Shared by the background and letter gradients.' : undefined}
-          />
-        )}
-        <ContrastBadge />
-      </Section>
-      <Section title="Size">
-        <Slider label="Canvas size" value={size} {...LIMITS.size} onChange={setSize} format={(n) => `${n} px`} />
-        <Slider
-          label="Letter scale"
-          value={scale}
-          {...LIMITS.scale}
-          onChange={setScale}
-          format={(n) => `${n}%`}
-          hint="Height of the letters relative to the canvas. Capped so letters never leave the shape."
-        />
-      </Section>
-      {c.pair && (
-      <Section
-        title="Monogram"
-        summary={state.layout === 'stack' ? 'Stacked' : 'In a row'}
-        action={
-          state.rotate1 !== 0 || state.rotate2 !== 0 ? (
-            <button
-              type="button"
-              className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
-              onClick={() => apply({ rotate1: 0, rotate2: 0 })}
-            >
-              <Icon name="reset" size={14} /> Straighten
-            </button>
-          ) : undefined
-        }
-      >
-        <Slider
-          label="Letter spacing"
-          value={spacing}
-          {...LIMITS.spacing}
-          onChange={setSpacing}
-          format={signed('%')}
-          hint={state.layout === 'stack' ? 'Gap between the stacked letters.' : 'Space between the two characters. Negative values overlap them.'}
-        />
-        <Slider
-          label="Overlap gap"
-          value={state.knockout}
-          {...LIMITS.knockout}
-          onChange={(knockout) => apply({ knockout })}
-          format={(n) => (n === 0 ? 'Off' : `${(n / 10).toFixed(1)}%`)}
-          hint="Cuts a gap into the first letter where the second crosses it, so overlapping letters stay readable."
-        />
-        <Slider
-          label="First letter rotation"
-          value={state.rotate1}
-          {...LIMITS.rotate1}
-          onChange={(rotate1) => apply({ rotate1 })}
-          format={signed('°')}
-        />
-        <Slider
-          label="Second letter rotation"
-          value={state.rotate2}
-          {...LIMITS.rotate2}
-          onChange={(rotate2) => apply({ rotate2 })}
-          format={signed('°')}
-        />
-        <Slider
-          label="Second letter shift"
-          value={state.shift}
-          {...LIMITS.shift}
-          onChange={(shift) => apply({ shift })}
-          format={signed('%')}
-          hint="Moves the second letter up (+) or down (−) before fitting, in percent of the font size."
-        />
-      </Section>
-      )}
     </div>
   );
 }

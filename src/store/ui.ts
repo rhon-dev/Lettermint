@@ -1,6 +1,11 @@
 import { create } from 'zustand';
+import type { StyleFilter } from '../lib/designs';
+import { sanitizeText } from '../lib/sanitize';
 import { isPresentationHash } from '../lib/share';
 import type { LogoState } from './logo';
+
+/** Opening screen, the styles gallery, or the editor (share links open straight into the editor). */
+export type View = 'home' | 'gallery' | 'editor';
 
 export type Theme = 'system' | 'light' | 'dark';
 export type Backdrop = 'checker' | 'light' | 'dark';
@@ -15,8 +20,14 @@ interface UiState {
   backdrop: Backdrop;
   toast: Toast | null;
   exportOpen: boolean;
-  /** Bumped to reshuffle the variations gallery. */
-  seed: number;
+  view: View;
+  /** Initials the visitor is exploring (sanitized; the logo store keeps the edited mark). */
+  initials: string;
+  filter: StyleFilter;
+  /** Window scroll of the gallery when a design was opened, restored on the way back. */
+  galleryScroll: number;
+  /** The design last opened from the gallery, focused again on return. */
+  lastDesign: string | null;
   /** Letter the position controls move (0 = first, 1 = second). */
   selected: 0 | 1;
   /** A version kept for comparison during this session only (never saved or shared). */
@@ -29,7 +40,12 @@ interface UiState {
   setBackdrop: (b: Backdrop) => void;
   notify: (message: string) => void;
   setExportOpen: (open: boolean) => void;
-  shuffle: () => void;
+  setInitials: (raw: string) => void;
+  explore: () => void;
+  setFilter: (f: StyleFilter) => void;
+  openEditor: (designId: string, scroll: number) => void;
+  backToStyles: () => void;
+  goHome: () => void;
   select: (i: 0 | 1) => void;
   pin: (state: LogoState | null) => void;
   setShowPinned: (on: boolean) => void;
@@ -55,7 +71,12 @@ export const useUiStore = create<UiState>()((set) => ({
   backdrop: 'light',
   toast: null,
   exportOpen: false,
-  seed: Math.floor(Math.random() * 1e9),
+  // A link with a mark in it opens the editor; a plain visit starts on the opening screen.
+  view: typeof location !== 'undefined' && location.hash.replace(/^#/, '') !== '' ? 'editor' : 'home',
+  initials: '',
+  filter: 'all',
+  galleryScroll: 0,
+  lastDesign: null,
   selected: 1,
   pinned: null,
   showPinned: false,
@@ -75,7 +96,12 @@ export const useUiStore = create<UiState>()((set) => ({
     toastTimer = setTimeout(() => set({ toast: null }), 3000);
   },
   setExportOpen: (exportOpen) => set({ exportOpen }),
-  shuffle: () => set((s) => ({ seed: (s.seed * 16807 + 1) % 2147483647 })),
+  setInitials: (raw) => set({ initials: sanitizeText(raw) }),
+  explore: () => set({ view: 'gallery', galleryScroll: 0 }),
+  setFilter: (filter) => set({ filter }),
+  openEditor: (lastDesign, galleryScroll) => set({ view: 'editor', lastDesign, galleryScroll }),
+  backToStyles: () => set({ view: 'gallery' }),
+  goHome: () => set({ view: 'home' }),
   select: (selected) => set({ selected }),
   pin: (pinned) => set({ pinned, showPinned: false }),
   setShowPinned: (showPinned) => set({ showPinned }),

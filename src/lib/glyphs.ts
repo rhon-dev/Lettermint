@@ -36,9 +36,11 @@ interface FontStore {
   status: Partial<Record<FontKey, FontStatus>>;
   /** Font currently shown in the preview: the last selected font that finished loading. */
   activeKey: FontKey | null;
+  /** The same for the second letter's typeface. */
+  activeKey2: FontKey | null;
 }
 
-export const useFontStore = create<FontStore>()(() => ({ fonts: {}, status: {}, activeKey: null }));
+export const useFontStore = create<FontStore>()(() => ({ fonts: {}, status: {}, activeKey: null, activeKey2: null }));
 
 function setStatus(key: FontKey, status: FontStatus): void {
   useFontStore.setState((s) => ({ status: { ...s.status, [key]: status } }));
@@ -64,14 +66,17 @@ export function requestFont(id: FontId, weight: Weight): Promise<Font | null> {
   );
 }
 
-let latestSelection: FontKey | null = null;
+const latestSelection: [FontKey | null, FontKey | null] = [null, null];
 
-/** Switch the preview to the font once it is ready; until then the previous font stays visible. */
-export function selectFont(id: FontId, weight: Weight): Promise<Font | null> {
+/**
+ * Switch the preview to the font once it is ready; until then the previous font stays visible.
+ * Slot 0 is the mark's typeface, slot 1 the second letter's.
+ */
+export function selectFont(id: FontId, weight: Weight, slot: 0 | 1 = 0): Promise<Font | null> {
   const key = fontKey(id, weight);
-  latestSelection = key;
+  latestSelection[slot] = key;
   return requestFont(id, weight).then((font) => {
-    if (font && latestSelection === key) useFontStore.setState({ activeKey: key });
+    if (font && latestSelection[slot] === key) useFontStore.setState(slot === 0 ? { activeKey: key } : { activeKey2: key });
     return font;
   });
 }

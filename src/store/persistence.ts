@@ -1,5 +1,5 @@
 import { History } from '../lib/history';
-import { encodeState, presentationPayload, readShareHash, withV1Composition } from '../lib/share';
+import { encodeState, presentationPayload, readShareHash, withLetterDefaults, withV1Composition } from '../lib/share';
 import { useUiStore } from './ui';
 import { create } from 'zustand';
 import { pickState, sameState, useLogoStore, validatePartial, type LogoState } from './logo';
@@ -46,6 +46,15 @@ export function applyAsOneStep(partial: Partial<Record<keyof LogoState, unknown>
   endGesture();
 }
 
+/** Start editing a whole new mark (a gallery design): undo history begins here, not at the previous mark. */
+export function openDocument(state: LogoState): void {
+  restoring = true;
+  useLogoStore.setState(state);
+  restoring = false;
+  history = new History(pickState(useLogoStore.getState()), sameState);
+  syncFlags();
+}
+
 /** Edit link (default) or a presentation link that opens on the finished mark. */
 export function shareUrl(kind: 'edit' | 'present' = 'edit'): string {
   const { origin, pathname } = window.location;
@@ -62,7 +71,7 @@ export function initPersistence(): void {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     // Autosaves from before letter positions existed keep the composition they were drawn with.
-    if (saved) apply(withV1Composition(validatePartial(JSON.parse(saved) as Record<string, unknown>)));
+    if (saved) apply(withLetterDefaults(withV1Composition(validatePartial(JSON.parse(saved) as Record<string, unknown>))));
   } catch {
     // Corrupt or unavailable storage: start from defaults.
   }

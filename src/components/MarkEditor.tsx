@@ -40,6 +40,7 @@ export function MarkEditor({ geo, size, enabled, className = '' }: { geo: LogoGe
   const selected = useUiStore((s) => s.selected);
   const select = useUiStore((s) => s.select);
   const apply = useLogoStore((s) => s.apply);
+  const firstOnTop = useLogoStore((s) => s.firstOnTop);
 
   useEffect(() => {
     const el = ref.current;
@@ -147,7 +148,8 @@ export function MarkEditor({ geo, size, enabled, className = '' }: { geo: LogoGe
       onLostPointerCapture={(e) => finish(e, false)}
       style={{ pointerEvents: 'none' }}
     >
-      {letters.map((l, i) => (
+      {/* The front letter's hit area comes last, so it wins where the letters overlap. */}
+      {(firstOnTop ? [...letters.entries()].reverse() : [...letters.entries()]).map(([i, l]) => (
         <path
           key={i}
           d={l.d}

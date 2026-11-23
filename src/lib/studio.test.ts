@@ -36,9 +36,9 @@ describe('share encoding', () => {
   });
 
   it('keeps the usable part of a partly damaged link', () => {
-    // Position fields a link lacks get neutral defaults (see compose.test.ts).
+    // Position and per-letter fields a link lacks get neutral defaults (see compose.test.ts, letters.test.ts).
     expect(readShareHash('#t=AB&bg=nothex&s=%ZZ')).toEqual({
-      state: { text: 'AB', layout: 'row', dx1: 0, dy1: 0, dx2: 0, dy2: 0, knockout: 0 },
+      state: { text: 'AB', layout: 'row', dx1: 0, dy1: 0, dx2: 0, dy2: 0, knockout: 0, scale2: 100, twoTone: false, firstOnTop: false },
       damaged: false,
     });
   });

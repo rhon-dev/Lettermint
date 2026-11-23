@@ -11,6 +11,11 @@ export interface Paint {
   fgFill: 'solid' | 'gradient';
   letterStyle: 'fill' | 'outline';
   size: number;
+  /** Second letter in its own solid color. */
+  twoTone?: boolean;
+  secondColor?: string;
+  /** First letter drawn in front of the second. */
+  firstOnTop?: boolean;
 }
 
 export interface Vector {
@@ -66,23 +71,28 @@ export function logoSvgBody(paint: Paint, geo: LogoGeometry, idPrefix = 'lm'): s
     body += `<path d="${geo.ringPath}" transform="translate(${o} ${o})" fill="none" stroke="${fg}" stroke-width="${fmt(geo.ringWidth)}"/>`;
   }
   if (geo.glyphPath && !geo.placeholder) {
-    const paint = (d: string, extra = '') =>
+    const draw = (d: string, color: string, extra = '') =>
       geo.strokeWidth > 0
-        ? `<path d="${d}" fill="none" stroke="${fg}" stroke-width="${fmt(geo.strokeWidth)}" stroke-linejoin="round"${extra}/>`
-        : `<path d="${d}" fill="${fg}"${extra}/>`;
+        ? `<path d="${d}" fill="none" stroke="${color}" stroke-width="${fmt(geo.strokeWidth)}" stroke-linejoin="round"${extra}/>`
+        : `<path d="${d}" fill="${color}"${extra}/>`;
     const [first, second] = geo.letters;
+    const colors = [fg, paint.twoTone && paint.secondColor ? paint.secondColor : fg];
+    // Back letter first, front letter last; the gap is cut into the back letter.
+    const [back, front] = paint.firstOnTop ? [1, 0] : [0, 1];
     if (geo.knockoutWidth > 0 && first && second) {
-      // The second letter, widened by the gap (and by half the outline), is cut out of the first.
+      // The front letter, widened by the gap (and by half the outline), is cut out of the back one.
       const cut = fmt(geo.knockoutWidth * 2 + geo.strokeWidth);
       const [, , w, h] = geo.viewBox.split(' ');
       body +=
         `<mask id="${idPrefix}-ko" maskUnits="userSpaceOnUse" x="0" y="0" width="${w}" height="${h}">` +
         `<rect width="${w}" height="${h}" fill="#fff"/>` +
-        `<path d="${second.d}" fill="#000" stroke="#000" stroke-width="${cut}" stroke-linejoin="round"/></mask>` +
-        paint(first.d, ` mask="url(#${idPrefix}-ko)"`) +
-        paint(second.d);
+        `<path d="${geo.letters[front]!.d}" fill="#000" stroke="#000" stroke-width="${cut}" stroke-linejoin="round"/></mask>` +
+        draw(geo.letters[back]!.d, colors[back]!, ` mask="url(#${idPrefix}-ko)"`) +
+        draw(geo.letters[front]!.d, colors[front]!);
+    } else if (first && second && (colors[0] !== colors[1] || paint.firstOnTop)) {
+      body += draw(geo.letters[back]!.d, colors[back]!) + draw(geo.letters[front]!.d, colors[front]!);
     } else {
-      body += paint(geo.glyphPath);
+      body += draw(geo.glyphPath, fg);
     }
   }
   return body;

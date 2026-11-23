@@ -1,7 +1,9 @@
 import { shareUrl, undo, redo, useHistoryStore } from '../store/persistence';
 import { copyText } from '../lib/exporter';
+import { useLogoStore } from '../store/logo';
 import { useUiStore, type Theme } from '../store/ui';
 import { Icon, type IconName } from './Icon';
+import { Wordmark } from './Wordmark';
 
 const THEMES: { id: Theme; icon: IconName; label: string }[] = [
   { id: 'light', icon: 'sun', label: 'Light theme' },
@@ -12,15 +14,6 @@ const THEMES: { id: Theme; icon: IconName; label: string }[] = [
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
 const MOD = IS_MAC ? '⌘' : 'Ctrl+';
 
-function BrandMark() {
-  return (
-    <svg viewBox="0 0 64 64" width="32" height="32" aria-hidden="true" className="shrink-0">
-      <rect width="64" height="64" rx="20" fill="#047857" />
-      <path d="M17 20h6v19h10v5H17zM35 44V20h6l5 12 5-12h6v24h-5V30l-4 10h-4l-4-10v14z" fill="#fff" />
-    </svg>
-  );
-}
-
 export function TopBar({ compact = false }: { compact?: boolean }) {
   const canUndo = useHistoryStore((s) => s.canUndo);
   const canRedo = useHistoryStore((s) => s.canRedo);
@@ -28,9 +21,18 @@ export function TopBar({ compact = false }: { compact?: boolean }) {
   const setTheme = useUiStore((s) => s.setTheme);
   const setExportOpen = useUiStore((s) => s.setExportOpen);
   const notify = useUiStore((s) => s.notify);
-  const shuffle = useUiStore((s) => s.shuffle);
+  const setInitials = useUiStore((s) => s.setInitials);
+  const backToStyles = useUiStore((s) => s.backToStyles);
   const nextTheme = THEMES[(THEMES.findIndex((t) => t.id === theme) + 1) % THEMES.length] ?? THEMES[0]!;
   const currentTheme = THEMES.find((t) => t.id === theme) ?? THEMES[2]!;
+
+  const onBack = () => {
+    // The gallery shows the initials as edited here; the URL drops the mark so a reload starts fresh.
+    const text = useLogoStore.getState().text;
+    if (text) setInitials(text);
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    backToStyles();
+  };
 
   const onShare = async () => {
     try {
@@ -43,14 +45,14 @@ export function TopBar({ compact = false }: { compact?: boolean }) {
 
   return (
     <header className={`flex items-center gap-2 ${compact ? '' : 'px-1'}`}>
-      <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <BrandMark />
-        <div className="min-w-0">
-          <h1 className="truncate max-[420px]:sr-only font-display text-lg leading-tight font-bold tracking-tight">Lettermint</h1>
-          {!compact && (
-            <p className="truncate text-xs text-stone-600 dark:text-stone-400">Monogram studio · runs in your browser</p>
-          )}
-        </div>
+      <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
+        <button type="button" className="btn focus-ring -ml-2 shrink-0 px-2 sm:px-3" onClick={onBack}>
+          <Icon name="left" size={18} />
+          Styles
+        </button>
+        <span className="min-w-0 max-[420px]:sr-only">
+          <Wordmark as="h1" />
+        </span>
       </div>
 
       <nav aria-label="Editor actions" className="flex items-center gap-0.5 [@media(pointer:coarse)]:gap-2">
@@ -78,9 +80,6 @@ export function TopBar({ compact = false }: { compact?: boolean }) {
         </button>
         {!compact && (
           <>
-            <button type="button" className="btn focus-ring" onClick={shuffle} aria-label="Shuffle variations" title="Shuffle variations (R)">
-              <Icon name="shuffle" />
-            </button>
             <button type="button" className="btn focus-ring" onClick={onShare} aria-label="Copy share link" title="Copy share link">
               <Icon name="link" />
             </button>
@@ -100,11 +99,11 @@ export function TopBar({ compact = false }: { compact?: boolean }) {
           type="button"
           className={`btn btn-primary focus-ring ${compact ? 'ml-1 px-3' : 'px-4'}`}
           onClick={() => setExportOpen(true)}
-          title="Export (E)"
+          title="Download (E)"
           aria-keyshortcuts="E"
         >
           <Icon name="download" size={18} />
-          Export
+          Download
         </button>
       </nav>
     </header>

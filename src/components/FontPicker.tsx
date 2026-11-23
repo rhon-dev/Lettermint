@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Font } from 'opentype.js';
-import { FONTS } from '../fonts/registry';
+import { FONTS, type FontId, type Weight } from '../fonts/registry';
 import { buildLogo } from '../lib/buildLogo';
 import { fontKey, requestFont, useFontStore } from '../lib/glyphs';
 import { displayText } from '../lib/sanitize';
@@ -18,9 +18,8 @@ function TileGlyphs({ font, text }: { font: Font; text: string }) {
   );
 }
 
-function FontTile({ def, text, checked, onSelect }: { def: (typeof FONTS)[number]; text: string; checked: boolean; onSelect: () => void }) {
+function FontTile({ def, text, weight, checked, onSelect }: { def: (typeof FONTS)[number]; text: string; weight: Weight; checked: boolean; onSelect: () => void }) {
   const ref = useRef<HTMLLabelElement>(null);
-  const weight = useLogoStore((s) => s.weight);
   const key = fontKey(def.id, weight);
   const font = useFontStore((s) => s.fonts[key]);
   const status = useFontStore((s) => s.status[key]);
@@ -66,22 +65,21 @@ function FontTile({ def, text, checked, onSelect }: { def: (typeof FONTS)[number
   );
 }
 
-export function FontPicker() {
-  const fontId = useLogoStore((s) => s.fontId);
-  const setFontId = useLogoStore((s) => s.setFontId);
+export function FontPicker({ legend, value, weight, onSelect }: { legend: string; value: FontId; weight: Weight; onSelect: (id: FontId) => void }) {
   const text = useLogoStore((s) => displayText(s.text, s.uppercase));
 
   return (
     <fieldset>
-      <legend className="sr-only">Font</legend>
+      <legend className="sr-only">{legend}</legend>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
         {FONTS.map((def) => (
           <FontTile
             key={def.id}
             def={def}
             text={text}
-            checked={def.id === fontId}
-            onSelect={() => setFontId(def.id)}
+            weight={weight}
+            checked={def.id === value}
+            onSelect={() => onSelect(def.id)}
           />
         ))}
       </div>

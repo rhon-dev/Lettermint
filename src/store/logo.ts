@@ -28,6 +28,8 @@ export const LIMITS = {
   dy2: { min: -5000, max: 5000, step: 1 },
   /** Gap cut around the front (second) letter where it overlaps the first, ‰ of the canvas; 0 = off. */
   knockout: { min: 0, max: 60, step: 1 },
+  /** Second letter size relative to the first, %. */
+  scale2: { min: 40, max: 160, step: 1 },
 } as const satisfies Record<string, Range>;
 
 type NumericKey = keyof typeof LIMITS;
@@ -66,6 +68,16 @@ export interface LogoState {
   stroke: number;
   fontId: FontId;
   weight: Weight;
+  /** Typeface and weight of the second letter (the same as the first unless a design or the user mixes them). */
+  fontId2: FontId;
+  weight2: Weight;
+  /** Second letter size relative to the first, %. */
+  scale2: number;
+  /** Paint the second letter in `secondColor` instead of the letter color. */
+  twoTone: boolean;
+  secondColor: string;
+  /** Draw the first letter in front of the second (the overlap gap is then cut into the second). */
+  firstOnTop: boolean;
   size: number;
   scale: number;
   spacing: number;
@@ -104,6 +116,12 @@ export const STATE_KEYS = [
   'stroke',
   'fontId',
   'weight',
+  'fontId2',
+  'weight2',
+  'scale2',
+  'twoTone',
+  'secondColor',
+  'firstOnTop',
   'size',
   'scale',
   'spacing',
@@ -163,6 +181,12 @@ export const DEFAULTS: LogoState = {
   stroke: 30,
   fontId: DEFAULT_FONT_ID,
   weight: 800,
+  fontId2: DEFAULT_FONT_ID,
+  weight2: 800,
+  scale2: 100,
+  twoTone: false,
+  secondColor: '#047857',
+  firstOnTop: false,
   size: 512,
   scale: 62,
   // Overlap starter for this font and pair (asserted in compose.test.ts).
@@ -206,7 +230,7 @@ export function validatePartial(p: UntrustedState): Partial<LogoState> {
   const out: Partial<LogoState> = {};
   if (typeof p.text === 'string') out.text = sanitizeText(p.text);
   if (typeof p.brandName === 'string') out.brandName = sanitizeName(p.brandName);
-  for (const key of ['uppercase', 'ring'] as const) {
+  for (const key of ['uppercase', 'ring', 'twoTone', 'firstOnTop'] as const) {
     if (typeof p[key] === 'boolean') out[key] = p[key];
   }
   if (isShape(p.shape)) out.shape = p.shape;
@@ -215,9 +239,12 @@ export function validatePartial(p: UntrustedState): Partial<LogoState> {
   if (isLetterStyle(p.letterStyle)) out.letterStyle = p.letterStyle;
   if (typeof p.layout === 'string' && (LAYOUTS as readonly string[]).includes(p.layout)) out.layout = p.layout as Layout;
   if (isFontId(p.fontId)) out.fontId = p.fontId;
+  if (isFontId(p.fontId2)) out.fontId2 = p.fontId2;
   const weight = toNumber(p.weight);
   if (isWeight(weight)) out.weight = weight;
-  for (const key of ['bgColor', 'bgColor2', 'fgColor', 'fgColor2'] as const) {
+  const weight2 = toNumber(p.weight2);
+  if (isWeight(weight2)) out.weight2 = weight2;
+  for (const key of ['bgColor', 'bgColor2', 'fgColor', 'fgColor2', 'secondColor'] as const) {
     const v = p[key];
     const hex = typeof v === 'string' ? parseHex(v) : null;
     if (hex) out[key] = hex;

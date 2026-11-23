@@ -7,7 +7,6 @@ import { brandKitZip } from '../lib/kitZip';
 import { displayText, MAX_NAME, NAME_HINT } from '../lib/sanitize';
 import { logoSvgString } from '../lib/svg';
 import { useCurrentMark } from '../hooks/useCurrentMark';
-import { fontKey, useFontStore } from '../lib/glyphs';
 import { shareUrl } from '../store/persistence';
 import { useLogoStore } from '../store/logo';
 import { useUiStore } from '../store/ui';
@@ -30,13 +29,12 @@ export function ExportDialog() {
   const setOpen = useUiStore((s) => s.setExportOpen);
   const notify = useUiStore((s) => s.notify);
   const ref = useRef<HTMLDialogElement>(null);
-  const { state, font, family, fontReady } = useCurrentMark();
+  const { state, font, font2, family, fontReady, fontFailed } = useCurrentMark();
   const [format, setFormat] = useState<Format>('png');
   const [px, setPx] = useState<number>(1024);
   const [busy, setBusy] = useState(false);
   const setBrandName = useLogoStore((s) => s.setBrandName);
   const toast = useUiStore((s) => s.toast);
-  const fontFailed = useFontStore((s) => s.status[fontKey(state.fontId, state.weight)] === 'error');
 
   useEffect(() => {
     const d = ref.current;
@@ -45,7 +43,7 @@ export function ExportDialog() {
     if (!open && d.open) d.close();
   }, [open]);
 
-  const geo = useMemo(() => buildLogo(state, font), [state, font]);
+  const geo = useMemo(() => buildLogo(state, font, font2), [state, font, font2]);
   // Only export once the chosen font is the one drawn, never the previous font kept on screen while it loads.
   const ready = fontReady && !geo.placeholder;
   // Which action just succeeded: its button pulses once and shows a check (cleared when the pulse ends).
@@ -120,7 +118,7 @@ export function ExportDialog() {
         <header className="flex items-start justify-between gap-4">
           <div>
             <h2 id="export-title" className="font-display text-xl font-bold tracking-tight">
-              Export your mark
+              Download your mark
             </h2>
             <p className="text-sm text-stone-600 dark:text-stone-400">Vector or pixel-perfect PNG, ready to use.</p>
           </div>
