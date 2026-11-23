@@ -1,11 +1,14 @@
-import { useMemo } from 'react';
+import { useDeferredValue, useMemo } from 'react';
 import { buildLogo } from '../lib/buildLogo';
 import { useCurrentMark } from '../hooks/useCurrentMark';
 import { LogoMark } from './LogoMark';
 
 /** The current mark shown in the places it will actually live. */
 export function Mockups() {
-  const { state, font } = useCurrentMark();
+  const live = useCurrentMark();
+  // Deferred like the gallery: the artboard updates first during a drag.
+  const state = useDeferredValue(live.state);
+  const font = live.font;
   const geo = useMemo(() => buildLogo(state, font), [state, font]);
   // App icons are masked by the OS, so they get the full-bleed square version.
   const iconState = useMemo(() => ({ ...state, shape: 'square' as const }), [state]);

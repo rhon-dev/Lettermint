@@ -30,7 +30,7 @@ export function ExportDialog() {
   const setOpen = useUiStore((s) => s.setExportOpen);
   const notify = useUiStore((s) => s.notify);
   const ref = useRef<HTMLDialogElement>(null);
-  const { state, font, family } = useCurrentMark();
+  const { state, font, family, fontReady } = useCurrentMark();
   const [format, setFormat] = useState<Format>('png');
   const [px, setPx] = useState<number>(1024);
   const [busy, setBusy] = useState(false);
@@ -46,7 +46,13 @@ export function ExportDialog() {
   }, [open]);
 
   const geo = useMemo(() => buildLogo(state, font), [state, font]);
-  const ready = font !== null && !geo.placeholder;
+  // Only export once the chosen font is the one drawn, never the previous font kept on screen while it loads.
+  const ready = fontReady && !geo.placeholder;
+  // Which action just succeeded: its button pulses once and shows a check (cleared when the pulse ends).
+  const [confirmed, setConfirmed] = useState<string | null>(null);
+  const confirm = (id: string) => setConfirmed(id);
+  const flash = (id: string) => (confirmed === id ? 'motion-safe:animate-confirm' : '');
+  const clear = () => setTimeout(() => setConfirmed(null), 600);
   const svg = () => logoSvgString(state, geo, describeLogo(state, family));
   const name = state.brandName.trim();
   const stem = fileStem(displayText(state.text, state.uppercase), state.shape);
@@ -68,12 +74,15 @@ export function ExportDialog() {
         const title = describeLogo(state, family);
         downloadBlob(await brandKitZip({ paint: state, geo, font, name, title }), `${stem}-brand-kit.zip`);
         notify('Brand kit downloaded');
+        confirm('download');
       } else if (format === 'svg') {
         downloadBlob(svgBlob(svg()), `${stem}.svg`);
         notify('SVG downloaded');
+        confirm('download');
       } else {
         downloadBlob(await svgToPng(svg(), px), `${stem}-${px}.png`);
         notify(`PNG ${px}×${px} downloaded`);
+        confirm('download');
       }
     } catch {
       notify('Export failed. Please try again, or pick a smaller PNG size.');
@@ -82,10 +91,11 @@ export function ExportDialog() {
     }
   };
 
-  const onCopy = async (what: 'svg' | 'link') => {
+  const onCopy = async (what: 'svg' | 'link' | 'present') => {
     try {
-      await copyText(what === 'svg' ? svg() : shareUrl());
-      notify(what === 'svg' ? 'SVG code copied' : 'Share link copied');
+      await copyText(what === 'svg' ? svg() : shareUrl(what === 'present' ? 'present' : 'edit'));
+      notify(what === 'svg' ? 'SVG code copied' : what === 'present' ? 'Presentation link copied' : 'Edit link copied');
+      confirm(what);
     } catch {
       notify(
         what === 'svg'
@@ -241,7 +251,8 @@ export function ExportDialog() {
         <div className="space-y-2">
           <button
             type="button"
-            className="btn btn-primary focus-ring w-full text-base"
+            className={`btn btn-primary focus-ring w-full text-base ${flash('download')}`}
+            onAnimationEnd={clear}
             disabled={!ready || busy}
             aria-busy={busy}
             onClick={onDownload}
@@ -259,11 +270,30 @@ export function ExportDialog() {
             </p>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="btn chip focus-ring" disabled={!ready} onClick={() => onCopy('svg')}>
-              <Icon name="copy" size={18} /> Copy SVG
-            </button>
-            <button type="button" className="btn chip focus-ring" onClick={() => onCopy('link')}>
-              <Icon name="link" size={18} /> Copy link
+            {(
+              [
+                ['svg', 'copy', 'Copy SVG'],
+                ['link', 'link', 'Copy edit link'],
+              ] as const
+            ).map(([id, icon, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={`btn chip focus-ring ${flash(id)}`}
+                onAnimationEnd={clear}
+                disabled={id === 'svg' && !ready}
+                onClick={() => onCopy(id)}
+              >
+                <Icon name={confirmed === id ? 'check' : icon} size={18} /> {label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`btn chip focus-ring col-span-2 ${flash('present')}`}
+              onAnimationEnd={clear}
+              onClick={() => onCopy('present')}
+            >
+              <Icon name={confirmed === 'present' ? 'check' : 'eye'} size={18} /> Copy presentation link
             </button>
           </div>
         </div>

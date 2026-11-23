@@ -58,6 +58,12 @@ export function nudgeOffsets(state: LogoState, index: number, dir: Direction, la
   return { [key]: clampOffset(state[key] + sign * (large ? NUDGE.large : NUDGE.small)) };
 }
 
+/** Limit a drag (logo units) so the letter's ink box (at drag start) stays on the canvas. */
+export function keepInCanvas(box: { x1: number; y1: number; x2: number; y2: number }, dx: number, dy: number, size: number) {
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  return { dx: clamp(dx, -box.x1, size - box.x2), dy: clamp(dy, -box.y1, size - box.y2) };
+}
+
 export interface Snap {
   dx: number;
   dy: number;

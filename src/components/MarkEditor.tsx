@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import type { LogoGeometry } from '../lib/buildLogo';
-import { clampOffset, clientToLogo, offsetDelta, offsetKeys, snapCenter } from '../lib/compose';
+import { clampOffset, clientToLogo, keepInCanvas, offsetDelta, offsetKeys, snapCenter } from '../lib/compose';
 import { beginGesture, endGesture } from '../store/persistence';
 import { useLogoStore } from '../store/logo';
 import { useUiStore } from '../store/ui';
@@ -21,6 +21,7 @@ interface Drag {
   start: { x: number; y: number };
   offset: [number, number];
   center: { x: number; y: number };
+  box: { x1: number; y1: number; x2: number; y2: number };
   targets: { x: number[]; y: number[] };
 }
 
@@ -76,6 +77,7 @@ export function MarkEditor({ geo, size, enabled, className = '' }: { geo: LogoGe
       start: clientToLogo(e.clientX, e.clientY, svg.getBoundingClientRect(), size),
       offset: [s[kx], s[ky]],
       center: boxCenter(box),
+      box,
       targets: { x: [size / 2, ...(otherCenter ? [otherCenter.x] : [])], y: [size / 2, ...(otherCenter ? [otherCenter.y] : [])] },
     };
   };
@@ -99,7 +101,8 @@ export function MarkEditor({ geo, size, enabled, className = '' }: { geo: LogoGe
       ? { dx: 0, dy: 0, guideX: null, guideY: null }
       : snapCenter({ x: d.center.x + dx, y: d.center.y + dy }, d.targets, (SNAP_PX * size) / Math.min(rect.width, rect.height));
     const [kx, ky] = offsetKeys(d.index);
-    apply({ [kx]: clampOffset(d.offset[0] + offsetDelta(dx + snap.dx, size)), [ky]: clampOffset(d.offset[1] + offsetDelta(dy + snap.dy, size)) });
+    const move = keepInCanvas(d.box, dx + snap.dx, dy + snap.dy, size);
+    apply({ [kx]: clampOffset(d.offset[0] + offsetDelta(move.dx, size)), [ky]: clampOffset(d.offset[1] + offsetDelta(move.dy, size)) });
     setGuides((g) => (g.x === snap.guideX && g.y === snap.guideY ? g : { x: snap.guideX, y: snap.guideY }));
   };
 

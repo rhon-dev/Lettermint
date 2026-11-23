@@ -9,6 +9,7 @@ import {
   OFFSET_UNIT,
   clientToLogo,
   composeStarter,
+  keepInCanvas,
   letterLabels,
   nudgeOffsets,
   offsetDelta,
@@ -124,6 +125,19 @@ describe('snapCenter', () => {
 
   it('does nothing outside the threshold', () => {
     expect(snapCenter({ x: 240, y: 240 }, { x: [256], y: [256] }, 6)).toEqual({ dx: 0, dy: 0, guideX: null, guideY: null });
+  });
+});
+
+describe('keepInCanvas', () => {
+  const box = { x1: 100, y1: 50, x2: 300, y2: 250 };
+
+  it('passes moves that stay inside the canvas', () => {
+    expect(keepInCanvas(box, 40, -20, 512)).toEqual({ dx: 40, dy: -20 });
+  });
+
+  it('stops a letter at the canvas edge so exports never crop it', () => {
+    expect(keepInCanvas(box, 400, -300, 512)).toEqual({ dx: 212, dy: -50 });
+    expect(keepInCanvas(box, -400, 400, 512)).toEqual({ dx: -100, dy: 262 });
   });
 });
 

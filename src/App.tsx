@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react';
 import { BottomSheet } from './components/BottomSheet';
+import { Compose } from './components/Compose';
 import { Controls } from './components/Controls';
 import { Mockups } from './components/Mockups';
+import { Presentation } from './components/Presentation';
 import { Preview } from './components/Preview';
 import { Toast } from './components/Toast';
 import { TopBar } from './components/TopBar';
@@ -37,7 +39,7 @@ function Footer() {
       </a>
       <span className="mt-1 block">
         Shortcuts: <kbd className="font-mono">R</kbd> shuffle · <kbd className="font-mono">E</kbd> export ·{' '}
-        <kbd className="font-mono">⌘/Ctrl Z</kbd> undo
+        <kbd className="font-mono">⌘/Ctrl Z</kbd> undo · arrow keys move the selected letter
       </span>
       <span className="mt-1 block">{DISCLAIMER}</span>
     </footer>
@@ -46,18 +48,22 @@ function Footer() {
 
 function DesktopLayout() {
   return (
-    <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-4 p-4 xl:p-6">
+    <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 p-4 xl:px-6">
       <TopBar />
       <main className="flex min-h-0 flex-1 gap-4 xl:gap-6">
-        <div className="flex min-w-0 basis-[62%] flex-col gap-4 overflow-y-auto">
-          <Preview className="min-h-[24rem] flex-1" />
+        {/* The mark gets most of the first view; variations and mockups follow when you scroll. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto">
+          <Preview className="h-[calc(100dvh-6.5rem)] min-h-[26rem] shrink-0" />
           <div className="surface space-y-6 p-5">
             <Variations />
             <Mockups />
           </div>
         </div>
-        <aside aria-label="Logo controls" className="surface min-w-0 basis-[38%] overflow-y-auto p-6">
-          <Controls />
+        <aside aria-label="Logo controls" className="surface w-[22rem] shrink-0 overflow-y-auto p-5 xl:w-[24rem]">
+          <Compose />
+          <div className="mt-6 border-t border-stone-200/80 pt-4 dark:border-stone-800">
+            <Controls />
+          </div>
           <Footer />
         </aside>
       </main>
@@ -77,11 +83,15 @@ function MobileLayout() {
         }`}
       >
         <TopBar compact />
-        <Preview className="flex-1" showSize={sheet.snap === 'peek'} />
+        <Preview className="flex-1" compact showSize={false} />
       </div>
       <BottomSheet sheet={sheet} label="Logo controls">
         <main>
+          {/* Initials and composition come before variations; the artwork stays visible above. */}
           <div className="pb-6">
+            <Compose />
+          </div>
+          <div className="border-t border-stone-200/80 py-6 dark:border-stone-800">
             <Variations compact />
           </div>
           <Controls />
@@ -100,6 +110,7 @@ export function App() {
   const fontId = useLogoStore((s) => s.fontId);
   const weight = useLogoStore((s) => s.weight);
   const exportOpen = useUiStore((s) => s.exportOpen);
+  const presenting = useUiStore((s) => s.presenting);
   const notify = useUiStore((s) => s.notify);
   const [exportLoaded, setExportLoaded] = useState(false);
   if (exportOpen && !exportLoaded) setExportLoaded(true);
@@ -119,7 +130,7 @@ export function App() {
       >
         Skip to editor
       </a>
-      {isDesktop ? <DesktopLayout /> : <MobileLayout />}
+      {presenting ? <Presentation /> : isDesktop ? <DesktopLayout /> : <MobileLayout />}
       {exportLoaded && (
         <Suspense fallback={null}>
           <ExportDialog />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useDeferredValue, useEffect, useMemo } from 'react';
 import { getFontDef } from '../fonts/registry';
 import { fontKey, requestFont, useFontStore } from '../lib/glyphs';
 import { displayText } from '../lib/sanitize';
@@ -11,7 +11,8 @@ import { Icon } from './Icon';
 import { LogoMark } from './LogoMark';
 
 function VariationTile({ v, index }: { v: Variation; index: number }) {
-  const current = useLogoStore(useShallow(pickState));
+  // Deferred so a letter drag tracks the pointer first; tiles catch up when the main thread is free.
+  const current = useDeferredValue(useLogoStore(useShallow(pickState)));
   const font = useFontStore((s) => s.fonts[fontKey(v.fontId, current.weight)] ?? null);
   const apply = useLogoStore((s) => s.apply);
   const notify = useUiStore((s) => s.notify);
@@ -62,8 +63,8 @@ export function Variations({ count = 8, compact = false }: { count?: number; com
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 id="variations-title" className="flex items-center gap-2 text-sm font-semibold">
-            <Icon name="sparkles" size={16} className="text-iris-500" />
-            Variations for <span className="text-aurora font-display text-base">{text || 'Aa'}</span>
+            <Icon name="sparkles" size={16} className="text-mint-700 dark:text-mint-400" />
+            Variations for <span className="font-display text-base">{text || 'Aa'}</span>
           </h2>
           {!compact && (
             <p className="text-xs text-stone-600 dark:text-stone-400">Tap one to start from it, then fine-tune.</p>

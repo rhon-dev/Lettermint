@@ -15,13 +15,7 @@ const MOD = IS_MAC ? '⌘' : 'Ctrl+';
 function BrandMark() {
   return (
     <svg viewBox="0 0 64 64" width="32" height="32" aria-hidden="true" className="shrink-0">
-      <defs>
-        <linearGradient id="brand-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#10b981" />
-          <stop offset="1" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-      <rect width="64" height="64" rx="20" fill="url(#brand-g)" />
+      <rect width="64" height="64" rx="20" fill="#047857" />
       <path d="M17 20h6v19h10v5H17zM35 44V20h6l5 12 5-12h6v24h-5V30l-4 10h-4l-4-10v14z" fill="#fff" />
     </svg>
   );
@@ -48,15 +42,13 @@ export function TopBar({ compact = false }: { compact?: boolean }) {
   };
 
   return (
-    <header className={`flex items-center gap-2 ${compact ? '' : 'surface px-3 py-2'}`}>
+    <header className={`flex items-center gap-2 ${compact ? '' : 'px-1'}`}>
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <BrandMark />
         <div className="min-w-0">
           <h1 className="truncate max-[420px]:sr-only font-display text-lg leading-tight font-bold tracking-tight">Lettermint</h1>
           {!compact && (
-            <p className="truncate text-xs text-stone-600 dark:text-stone-400">
-              Brand-mark studio · free, private, offline
-            </p>
+            <p className="truncate text-xs text-stone-600 dark:text-stone-400">Monogram studio · runs in your browser</p>
           )}
         </div>
       </div>

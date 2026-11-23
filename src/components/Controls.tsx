@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { WEIGHT_LABELS, type Weight } from '../fonts/registry';
+import { getFontDef, WEIGHT_LABELS, type Weight } from '../fonts/registry';
 import { meetsAA } from '../lib/color';
 import { craftControls, nextBlobSeed, worstContrast } from '../lib/controls';
+import { SHAPE_LABELS } from '../lib/shapes';
 import { pickState, useLogoStore, LIMITS, type Fill, type LetterStyle } from '../store/logo';
 import { useUiStore } from '../store/ui';
 import { ColorField } from './ColorField';
@@ -13,17 +14,25 @@ import { Segmented } from './Segmented';
 import { ShapePicker } from './ShapePicker';
 import { Slider } from './Slider';
 import { Switch } from './Switch';
-import { TextInput } from './TextInput';
 
-function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+/** Inspector section: collapsed until asked for, so the first view stays about the mark. */
+function Section({ title, summary, action, children }: { title: string; summary?: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="space-y-4 border-b border-stone-200/80 py-6 first:pt-0 last:border-b-0 last:pb-0 dark:border-stone-800">
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold tracking-widest text-stone-600 uppercase dark:text-stone-400">{title}</h2>
-        {action}
+    <details className="group border-b border-stone-200/80 last:border-b-0 dark:border-stone-800">
+      <summary className="focus-ring flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-lg py-2 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-baseline gap-2">
+          <h2 className="text-xs font-semibold tracking-widest text-stone-700 uppercase dark:text-stone-300">{title}</h2>
+          {summary && <span className="truncate text-xs text-stone-600 dark:text-stone-400">{summary}</span>}
+        </span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="shrink-0 text-stone-500 transition-transform duration-150 group-open:rotate-180">
+          <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </summary>
+      <div className="space-y-4 pt-1 pb-6">
+        {action && <div className="flex justify-end">{action}</div>}
+        {children}
       </div>
-      {children}
-    </section>
+    </details>
   );
 }
 
@@ -119,24 +128,20 @@ export function Controls() {
 
   return (
     <div>
-      <Section
-        title="Text"
-        action={
-          <button
-            type="button"
-            className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
-            onClick={() => {
-              reset();
-              notify('Reset to defaults — undo with ⌘/Ctrl+Z');
-            }}
-          >
-            <Icon name="reset" size={14} /> Reset all
-          </button>
-        }
-      >
-        <TextInput />
-      </Section>
-      <Section title="Shape">
+      <div className="flex items-center justify-between gap-3 pb-1">
+        <h2 className="text-sm font-semibold">Details</h2>
+        <button
+          type="button"
+          className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
+          onClick={() => {
+            reset();
+            notify('Reset to the starting mark. Undo with ⌘/Ctrl+Z');
+          }}
+        >
+          <Icon name="reset" size={14} /> Reset all
+        </button>
+      </div>
+      <Section title="Shape" summary={SHAPE_LABELS[state.shape]}>
         <ShapePicker />
         {c.showRadius && (
           <Slider
@@ -170,7 +175,7 @@ export function Controls() {
           hint={c.ringAvailable ? 'A border inside the shape, in the letter color.' : 'Needs a background shape.'}
         />
       </Section>
-      <Section title="Typeface">
+      <Section title="Typeface" summary={`${getFontDef(state.fontId).family} · ${state.weight}`}>
         <FontPicker />
         <Segmented<Weight>
           legend="Weight"
@@ -274,38 +279,45 @@ export function Controls() {
           format={(n) => `${n}%`}
           hint="Height of the letters relative to the canvas. Capped so letters never leave the shape."
         />
-        <Slider
-          label="Letter spacing"
-          value={spacing}
-          {...LIMITS.spacing}
-          onChange={setSpacing}
-          format={signed('%')}
-          disabled={!c.pair}
-          hint={c.pair ? 'Space between the two characters. Negative values overlap them.' : 'Applies when there are two characters.'}
-        />
       </Section>
+      {c.pair && (
       <Section
         title="Monogram"
+        summary={state.layout === 'stack' ? 'Stacked' : 'Side by side'}
         action={
-          c.pair && (state.rotate1 !== 0 || state.rotate2 !== 0 || state.shift !== 0) ? (
+          state.rotate1 !== 0 || state.rotate2 !== 0 ? (
             <button
               type="button"
               className="btn focus-ring -mr-2 text-xs text-stone-600 dark:text-stone-400"
-              onClick={() => apply({ rotate1: 0, rotate2: 0, shift: 0 })}
+              onClick={() => apply({ rotate1: 0, rotate2: 0 })}
             >
               <Icon name="reset" size={14} /> Straighten
             </button>
           ) : undefined
         }
       >
-        {!c.pair && <p className="text-xs text-stone-600 dark:text-stone-400">Type two characters to rotate or offset them.</p>}
+        <Slider
+          label="Letter spacing"
+          value={spacing}
+          {...LIMITS.spacing}
+          onChange={setSpacing}
+          format={signed('%')}
+          hint={state.layout === 'stack' ? 'Gap between the stacked letters.' : 'Space between the two characters. Negative values overlap them.'}
+        />
+        <Slider
+          label="Overlap gap"
+          value={state.knockout}
+          {...LIMITS.knockout}
+          onChange={(knockout) => apply({ knockout })}
+          format={(n) => (n === 0 ? 'Off' : `${(n / 10).toFixed(1)}%`)}
+          hint="Cuts a gap into the first letter where the second crosses it, so overlapping letters stay readable."
+        />
         <Slider
           label="First letter rotation"
           value={state.rotate1}
           {...LIMITS.rotate1}
           onChange={(rotate1) => apply({ rotate1 })}
           format={signed('°')}
-          disabled={!c.pair}
         />
         <Slider
           label="Second letter rotation"
@@ -313,7 +325,6 @@ export function Controls() {
           {...LIMITS.rotate2}
           onChange={(rotate2) => apply({ rotate2 })}
           format={signed('°')}
-          disabled={!c.pair}
         />
         <Slider
           label="Second letter shift"
@@ -321,10 +332,10 @@ export function Controls() {
           {...LIMITS.shift}
           onChange={(shift) => apply({ shift })}
           format={signed('%')}
-          disabled={!c.pair}
-          hint={c.pair ? 'Moves the second letter up (+) or down (−), in percent of the font size.' : undefined}
+          hint="Moves the second letter up (+) or down (−) before fitting, in percent of the font size."
         />
       </Section>
+      )}
     </div>
   );
 }

@@ -13,11 +13,14 @@
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Brand: mint primary, violet secondary (docs/PLAN.md §2). */
+  --color-mint-50: #ecfdf5;
+  --color-mint-200: #a7f3d0;
   --color-mint-400: #34d399;
   --color-mint-500: #10b981;
   --color-mint-600: #059669;
   --color-mint-700: #047857;
   --color-mint-800: #065f46;
+  --color-mint-900: #064e3b;
   --color-iris-400: #a78bfa;
   --color-iris-500: #8b5cf6;
   --color-iris-600: #7c3aed;
@@ -74,11 +77,6 @@ body,
 
 body {
   @apply bg-stone-100 font-sans text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
-  /* Soft aurora wash behind the app chrome. */
-  background-image:
-    radial-gradient(60rem 30rem at 10% -10%, color-mix(in oklab, var(--color-mint-500) 14%, transparent), transparent 70%),
-    radial-gradient(50rem 28rem at 100% 0%, color-mix(in oklab, var(--color-iris-500) 12%, transparent), transparent 70%);
-  background-attachment: fixed;
 }
 
 /* Visible focus ring for every interactive element. */

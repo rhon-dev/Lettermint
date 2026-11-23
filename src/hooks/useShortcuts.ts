@@ -26,7 +26,8 @@ export function useShortcuts(): void {
         redo();
         return;
       }
-      if (mod || e.altKey || isTyping(e.target) || useUiStore.getState().exportOpen) return;
+      const ui = useUiStore.getState();
+      if (mod || e.altKey || isTyping(e.target) || ui.exportOpen || ui.presenting) return;
       if (key === 'r') {
         e.preventDefault();
         useUiStore.getState().shuffle();
