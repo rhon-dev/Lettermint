@@ -165,7 +165,7 @@ export function Preview({ className = '', compact = false, showSize = true }: { 
           </div>
         )}
 
-        <div role="radiogroup" aria-label="Artboard background" className={`absolute top-2 left-2 flex gap-1 p-1 ${pill}`}>
+        <div role="radiogroup" aria-label="Artboard background" className={`absolute top-2 left-2 flex gap-1 p-1 [@media(pointer:coarse)]:gap-2 ${pill}`}>
           {BACKDROPS.map((b) => (
             <button
               key={b.id}

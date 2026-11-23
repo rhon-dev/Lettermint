@@ -53,7 +53,7 @@ export function TopBar({ compact = false }: { compact?: boolean }) {
         </div>
       </div>
 
-      <nav aria-label="Editor actions" className="flex items-center gap-0.5">
+      <nav aria-label="Editor actions" className="flex items-center gap-0.5 [@media(pointer:coarse)]:gap-2">
         <button
           type="button"
           className="btn focus-ring"

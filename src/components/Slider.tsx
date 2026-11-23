@@ -36,7 +36,7 @@ export function Slider({ label, value, min, max, step, onChange, format, disable
         aria-valuetext={format(value)}
         aria-describedby={hint ? hintId : undefined}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="focus-ring h-6 w-full cursor-pointer rounded-full disabled:cursor-not-allowed"
+        className="focus-ring h-6 w-full cursor-pointer rounded-full disabled:cursor-not-allowed [@media(pointer:coarse)]:h-11"
       />
       {hint && (
         <p id={hintId} className="text-xs text-stone-600 dark:text-stone-400">

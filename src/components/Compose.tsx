@@ -117,7 +117,7 @@ export function Compose() {
         <fieldset>
           <legend className="mb-2 text-sm font-medium">Position</legend>
           <div className="flex items-start gap-4">
-            <div className="grid shrink-0 grid-cols-3 grid-rows-3 gap-0.5" role="group" aria-label="Move the selected letter">
+            <div className="grid shrink-0 grid-cols-3 grid-rows-3 gap-2" role="group" aria-label="Move the selected letter">
               {padButton('up', 'col-start-2')}
               {padButton('left', 'col-start-1 row-start-2')}
               {padButton('right', 'col-start-3 row-start-2')}
