@@ -3,7 +3,8 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 export type SheetSnap = 'peek' | 'expanded';
 
 /** Sheet height as a fraction of the viewport for each snap point. */
-export const SNAP_FRACTION: Record<SheetSnap, number> = { peek: 0.46, expanded: 0.78 };
+// Expanded stops short enough that the artwork stays visible above the sheet while editing.
+export const SNAP_FRACTION: Record<SheetSnap, number> = { peek: 0.46, expanded: 0.64 };
 
 interface DragState {
   startY: number;

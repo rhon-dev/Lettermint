@@ -7,7 +7,19 @@ import { logoSvgString, type Paint } from '../lib/svg';
  * The real 16 px favicon: the exported SVG rasterised to a 16×16 PNG, exactly as the brand kit's
  * favicon-16.png, shown at 16 CSS px in a light and a dark browser tab.
  */
-export function FaviconPreview({ paint, geo, title, className = '' }: { paint: Paint; geo: LogoGeometry; title: string; className?: string }) {
+export function FaviconPreview({
+  paint,
+  geo,
+  title,
+  compact = false,
+  className = '',
+}: {
+  paint: Paint;
+  geo: LogoGeometry;
+  title: string;
+  compact?: boolean;
+  className?: string;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const current = useRef<string | null>(null);
   const empty = geo.placeholder || !geo.glyphPath;
@@ -48,13 +60,13 @@ export function FaviconPreview({ paint, geo, title, className = '' }: { paint: P
     <figure className={`flex items-center gap-2 ${className}`}>
       <span className="flex h-8 items-center gap-1.5 rounded-lg bg-white px-2 shadow-sm ring-1 ring-stone-200">
         {icon}
-        <span className="text-xs text-stone-700">Light tab</span>
+        {!compact && <span className="text-xs text-stone-700">Light tab</span>}
       </span>
       <span className="flex h-8 items-center gap-1.5 rounded-lg bg-stone-800 px-2 ring-1 ring-stone-700">
         {icon}
-        <span className="text-xs text-stone-200">Dark tab</span>
+        {!compact && <span className="text-xs text-stone-200">Dark tab</span>}
       </span>
-      <figcaption className="text-xs whitespace-nowrap text-stone-600 dark:text-stone-400">Favicon · actual 16 px</figcaption>
+      <figcaption className="text-xs whitespace-nowrap text-stone-600 dark:text-stone-400">{compact ? '16 px' : 'Favicon · actual 16 px'}</figcaption>
     </figure>
   );
 }

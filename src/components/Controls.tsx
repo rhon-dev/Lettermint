@@ -283,7 +283,7 @@ export function Controls() {
       {c.pair && (
       <Section
         title="Monogram"
-        summary={state.layout === 'stack' ? 'Stacked' : 'Side by side'}
+        summary={state.layout === 'stack' ? 'Stacked' : 'In a row'}
         action={
           state.rotate1 !== 0 || state.rotate2 !== 0 ? (
             <button

@@ -196,9 +196,9 @@ export function Preview({ className = '', compact = false, showSize = true }: { 
           </p>
         )}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1">
-        <p className={`text-sm ${editing ? 'text-stone-700 dark:text-stone-300' : 'text-stone-600 dark:text-stone-400'}`}>{hint}</p>
-        <FaviconPreview paint={shown} geo={geo} title={describeLogo(shown, getFontDef(shown.fontId).family)} />
+      <div className={`flex items-center justify-between gap-x-4 gap-y-2 px-1 ${compact ? '' : 'flex-wrap'}`}>
+        <p className={`min-w-0 text-sm ${editing ? 'text-stone-700 dark:text-stone-300' : 'text-stone-600 dark:text-stone-400'}`}>{hint}</p>
+        <FaviconPreview compact={compact} paint={shown} geo={geo} title={describeLogo(shown, getFontDef(shown.fontId).family)} />
       </div>
     </section>
   );

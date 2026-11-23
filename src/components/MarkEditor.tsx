@@ -52,6 +52,18 @@ export function MarkEditor({ geo, size, enabled, className = '' }: { geo: LogoGe
     return () => ro.disconnect();
   }, [size]);
 
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) return;
+    // CSS touch-action is ignored on SVG shapes, so a touch that starts on a letter is claimed here
+    // (non-passive) to stop the browser from panning and cancelling the drag. Touches elsewhere still scroll.
+    const claim = (e: TouchEvent) => {
+      if (e.target instanceof Element && e.target.hasAttribute('data-letter')) e.preventDefault();
+    };
+    el.addEventListener('touchstart', claim, { passive: false });
+    return () => el.removeEventListener('touchstart', claim);
+  }, [enabled]);
+
   const letters = geo.placeholder ? [] : geo.letters;
   const sel = letters[selected] ?? letters[0];
 

@@ -50,15 +50,8 @@ function DesktopLayout() {
   return (
     <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 p-4 xl:px-6">
       <TopBar />
-      <main className="flex min-h-0 flex-1 gap-4 xl:gap-6">
-        {/* The mark gets most of the first view; variations and mockups follow when you scroll. */}
-        <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto">
-          <Preview className="h-[calc(100dvh-6.5rem)] min-h-[26rem] shrink-0" />
-          <div className="surface space-y-6 p-5">
-            <Variations />
-            <Mockups />
-          </div>
-        </div>
+      {/* Controls come first in the DOM (and tab order) but sit on the right; the mark takes most of the view. */}
+      <main className="flex min-h-0 flex-1 flex-row-reverse gap-4 xl:gap-6">
         <aside aria-label="Logo controls" className="surface w-[22rem] shrink-0 overflow-y-auto p-5 xl:w-[24rem]">
           <Compose />
           <div className="mt-6 border-t border-stone-200/80 pt-4 dark:border-stone-800">
@@ -66,6 +59,13 @@ function DesktopLayout() {
           </div>
           <Footer />
         </aside>
+        <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto">
+          <Preview className="h-[calc(100dvh-6.5rem)] min-h-[26rem] shrink-0" />
+          <div className="surface space-y-6 p-5">
+            <Variations />
+            <Mockups />
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -126,6 +126,11 @@ export function App() {
     <>
       <a
         href="#initials"
+        onClick={(e) => {
+          // Focus without touching the URL hash, which holds the share state.
+          e.preventDefault();
+          document.getElementById('initials')?.focus();
+        }}
         className="focus-ring sr-only z-50 rounded-lg bg-white px-3 py-2 text-sm focus:not-sr-only focus:fixed focus:top-3 focus:left-3 dark:bg-stone-900"
       >
         Skip to editor
