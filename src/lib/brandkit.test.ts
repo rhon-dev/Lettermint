@@ -155,7 +155,7 @@ describe('ogBackground', () => {
 
 describe('buildLockup', () => {
   const font = loadTestFont('inter', 700);
-  const state = { ...DEFAULTS };
+  const state = { ...DEFAULTS, shape: 'circle' as const };
   const geo = buildLogo(state, font);
 
   it('places the name to the right of the mark when horizontal', () => {

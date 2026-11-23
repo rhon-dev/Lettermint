@@ -43,7 +43,7 @@ export const FONTS = [
 
 export type FontId = (typeof FONTS)[number]['id'];
 
-export const DEFAULT_FONT_ID: FontId = 'inter';
+export const DEFAULT_FONT_ID: FontId = 'fraunces';
 
 export function isFontId(value: unknown): value is FontId {
   return FONTS.some((f) => f.id === value);

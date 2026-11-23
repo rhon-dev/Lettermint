@@ -21,6 +21,13 @@ export const LIMITS = {
   shift: { min: -50, max: 50, step: 1 },
   rotate1: { min: -45, max: 45, step: 1 },
   rotate2: { min: -45, max: 45, step: 1 },
+  // Letter positions, in 1/10000 of the canvas side (see lib/compose OFFSET_UNIT).
+  dx1: { min: -5000, max: 5000, step: 1 },
+  dy1: { min: -5000, max: 5000, step: 1 },
+  dx2: { min: -5000, max: 5000, step: 1 },
+  dy2: { min: -5000, max: 5000, step: 1 },
+  /** Gap cut around the front (second) letter where it overlaps the first, ‰ of the canvas; 0 = off. */
+  knockout: { min: 0, max: 60, step: 1 },
 } as const satisfies Record<string, Range>;
 
 type NumericKey = keyof typeof LIMITS;
@@ -30,6 +37,10 @@ export type Fill = (typeof FILLS)[number];
 
 export const LETTER_STYLES = ['fill', 'outline'] as const;
 export type LetterStyle = (typeof LETTER_STYLES)[number];
+
+/** How two characters are laid out before letter positions apply. */
+export const LAYOUTS = ['row', 'stack'] as const;
+export type Layout = (typeof LAYOUTS)[number];
 
 export interface LogoState {
   /** Sanitized text in the case the user typed it. */
@@ -62,6 +73,15 @@ export interface LogoState {
   shift: number;
   rotate1: number;
   rotate2: number;
+  /** Two characters side by side ('row') or the second under the first ('stack'). */
+  layout: Layout;
+  /** Letter positions after fitting, in 1/10000 of the canvas side (so they survive any canvas or screen size). */
+  dx1: number;
+  dy1: number;
+  dx2: number;
+  dy2: number;
+  /** Gap cut into the first letter around the second, ‰ of the canvas (0 = letters simply overlap). */
+  knockout: number;
   /** Optional brand name for lockups and the kit (sanitized; may end in one space while typing). */
   brandName: string;
 }
@@ -90,6 +110,12 @@ export const STATE_KEYS = [
   'shift',
   'rotate1',
   'rotate2',
+  'layout',
+  'dx1',
+  'dy1',
+  'dx2',
+  'dy2',
+  'knockout',
   'brandName',
 ] as const satisfies readonly (keyof LogoState)[];
 
@@ -115,30 +141,41 @@ export interface LogoActions {
   reset: () => void;
 }
 
+/**
+ * The first mark a visitor sees: an art-directed Fraunces 800 "LM" in the Overlap composition,
+ * ink on no shape, so the letterforms carry it in black and white at 160 px and at 16 px.
+ */
 export const DEFAULTS: LogoState = {
   text: 'LM',
   uppercase: true,
-  shape: 'circle',
+  shape: 'none',
   radius: DEFAULT_RADIUS,
   blobSeed: DEFAULT_SEED,
   ring: false,
-  bgColor: '#111111',
+  bgColor: '#e7e5e4',
   bgColor2: '#047857',
   fill: 'solid',
   gradientAngle: 135,
-  fgColor: '#ffffff',
+  fgColor: '#111111',
   fgColor2: '#a7f3d0',
   fgFill: 'solid',
   letterStyle: 'fill',
   stroke: 30,
   fontId: DEFAULT_FONT_ID,
-  weight: 700,
+  weight: 800,
   size: 512,
-  scale: 55,
-  spacing: 0,
-  shift: 0,
+  scale: 62,
+  // Overlap starter for this font and pair (asserted in compose.test.ts).
+  spacing: -18,
+  shift: 14,
   rotate1: 0,
   rotate2: 0,
+  layout: 'row',
+  dx1: 0,
+  dy1: 0,
+  dx2: 0,
+  dy2: 0,
+  knockout: 16,
   brandName: '',
 };
 
@@ -176,6 +213,7 @@ export function validatePartial(p: UntrustedState): Partial<LogoState> {
   if (isFill(p.fill)) out.fill = p.fill;
   if (isFill(p.fgFill)) out.fgFill = p.fgFill;
   if (isLetterStyle(p.letterStyle)) out.letterStyle = p.letterStyle;
+  if (typeof p.layout === 'string' && (LAYOUTS as readonly string[]).includes(p.layout)) out.layout = p.layout as Layout;
   if (isFontId(p.fontId)) out.fontId = p.fontId;
   const weight = toNumber(p.weight);
   if (isWeight(weight)) out.weight = weight;

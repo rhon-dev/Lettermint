@@ -19,11 +19,14 @@ describe('logo store', () => {
     expect(s()).toMatchObject({
       text: 'LM',
       uppercase: true,
-      bgColor: '#111111',
-      fgColor: '#ffffff',
-      fontId: 'inter',
+      shape: 'none',
+      fgColor: '#111111',
+      fontId: 'fraunces',
+      weight: 800,
       size: 512,
-      scale: 55,
+      scale: 62,
+      layout: 'row',
+      knockout: 16,
     });
     expect(DEFAULTS.size).toBe(512);
   });
@@ -67,11 +70,11 @@ describe('logo store', () => {
     s().setFgColor('#12');
     s().setShape('triangle');
     s().setFontId('comic-sans');
-    expect(s()).toMatchObject({ bgColor: '#111111', fgColor: '#ffffff', shape: 'circle', fontId: 'inter' });
+    expect(s()).toMatchObject({ bgColor: '#e7e5e4', fgColor: '#111111', shape: 'none', fontId: 'fraunces' });
     s().setBgColor('#ABC');
     s().setShape('squircle');
-    s().setFontId('fraunces');
-    expect(s()).toMatchObject({ bgColor: '#aabbcc', shape: 'squircle', fontId: 'fraunces' });
+    s().setFontId('inter');
+    expect(s()).toMatchObject({ bgColor: '#aabbcc', shape: 'squircle', fontId: 'inter' });
   });
 
   it('clampStep handles bounds and non-finite values', () => {

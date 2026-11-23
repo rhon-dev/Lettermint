@@ -66,10 +66,24 @@ export function logoSvgBody(paint: Paint, geo: LogoGeometry, idPrefix = 'lm'): s
     body += `<path d="${geo.ringPath}" transform="translate(${o} ${o})" fill="none" stroke="${fg}" stroke-width="${fmt(geo.ringWidth)}"/>`;
   }
   if (geo.glyphPath && !geo.placeholder) {
-    body +=
+    const paint = (d: string, extra = '') =>
       geo.strokeWidth > 0
-        ? `<path d="${geo.glyphPath}" fill="none" stroke="${fg}" stroke-width="${fmt(geo.strokeWidth)}" stroke-linejoin="round"/>`
-        : `<path d="${geo.glyphPath}" fill="${fg}"/>`;
+        ? `<path d="${d}" fill="none" stroke="${fg}" stroke-width="${fmt(geo.strokeWidth)}" stroke-linejoin="round"${extra}/>`
+        : `<path d="${d}" fill="${fg}"${extra}/>`;
+    const [first, second] = geo.letters;
+    if (geo.knockoutWidth > 0 && first && second) {
+      // The second letter, widened by the gap (and by half the outline), is cut out of the first.
+      const cut = fmt(geo.knockoutWidth * 2 + geo.strokeWidth);
+      const [, , w, h] = geo.viewBox.split(' ');
+      body +=
+        `<mask id="${idPrefix}-ko" maskUnits="userSpaceOnUse" x="0" y="0" width="${w}" height="${h}">` +
+        `<rect width="${w}" height="${h}" fill="#fff"/>` +
+        `<path d="${second.d}" fill="#000" stroke="#000" stroke-width="${cut}" stroke-linejoin="round"/></mask>` +
+        paint(first.d, ` mask="url(#${idPrefix}-ko)"`) +
+        paint(second.d);
+    } else {
+      body += paint(geo.glyphPath);
+    }
   }
   return body;
 }

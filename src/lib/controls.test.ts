@@ -47,7 +47,7 @@ describe('craftControls', () => {
 
 describe('worstContrast', () => {
   it('uses the weakest pair across background and letter gradient stops', () => {
-    const s = { ...DEFAULTS, bgColor: '#000000', fill: 'solid' as const, fgColor: '#ffffff', fgColor2: '#777777' };
+    const s = { ...DEFAULTS, shape: 'circle' as const, bgColor: '#000000', fill: 'solid' as const, fgColor: '#ffffff', fgColor2: '#777777' };
     expect(worstContrast(s)).toBeCloseTo(contrastRatio('#ffffff', '#000000'), 6);
     expect(worstContrast({ ...s, fgFill: 'gradient' })).toBeCloseTo(contrastRatio('#777777', '#000000'), 6);
   });

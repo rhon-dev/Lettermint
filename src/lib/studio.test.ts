@@ -36,7 +36,11 @@ describe('share encoding', () => {
   });
 
   it('keeps the usable part of a partly damaged link', () => {
-    expect(readShareHash('#t=AB&bg=nothex&s=%ZZ')).toEqual({ state: { text: 'AB' }, damaged: false });
+    // Position fields a link lacks get neutral defaults (see compose.test.ts).
+    expect(readShareHash('#t=AB&bg=nothex&s=%ZZ')).toEqual({
+      state: { text: 'AB', layout: 'row', dx1: 0, dy1: 0, dx2: 0, dy2: 0, knockout: 0 },
+      damaged: false,
+    });
   });
 
   it('treats an empty hash as no link', () => {
@@ -98,9 +102,11 @@ describe('logoSvgString', () => {
     shapePath: 'M0 0H10V10H0Z',
     glyphPath: 'M1 1L2 2Z',
     glyphCommands: [],
+    letters: [],
     glyphBox: null,
     placeholder: false,
     strokeWidth: 0,
+    knockoutWidth: 0,
     ringPath: '',
     ringOffset: 0,
     ringWidth: 0,

@@ -1,8 +1,8 @@
 import { History } from '../lib/history';
-import { encodeState, readShareHash } from '../lib/share';
+import { encodeState, readShareHash, withV1Composition } from '../lib/share';
 import { useUiStore } from './ui';
 import { create } from 'zustand';
-import { pickState, sameState, useLogoStore, type LogoState } from './logo';
+import { pickState, sameState, useLogoStore, validatePartial, type LogoState } from './logo';
 
 const STORAGE_KEY = 'lettermint:v2';
 
@@ -42,7 +42,8 @@ export function initPersistence(): void {
   const { apply } = useLogoStore.getState();
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) apply(JSON.parse(saved) as Record<string, unknown>);
+    // Autosaves from before letter positions existed keep the composition they were drawn with.
+    if (saved) apply(withV1Composition(validatePartial(JSON.parse(saved) as Record<string, unknown>)));
   } catch {
     // Corrupt or unavailable storage: start from defaults.
   }
